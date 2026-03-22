@@ -8,19 +8,25 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
   session.startTransaction();
 
   try {
-    // ১. ইউজারের কার্ট চেক করা
+    // ১. কার্ট থেকে অর্ডারের জন্য প্রয়োজনীয় ডাটা নিয়ে আসা
     const cart = await CartModel.findOne({ user: userId }).session(session);
     if (!cart || cart.items.length === 0) {
-      throw new Error("Your cart is empty!");
+      throw new Error(
+        "Cart is empty! Please add items to cart before checkout.",
+      );
     }
 
-    // ২. স্টক ভ্যালিডেশন এবং স্টক কমানো
+    // ২. প্রতিটি আইটেমের স্টক চেক এবং কমানো
     for (const item of cart.items) {
       const variant = await VariantModel.findById(item.variant).session(
         session,
       );
-      if (!variant || variant.stock < item.quantity) {
-        throw new Error(`Product variant ${item.variant} is out of stock!`);
+
+      if (!variant) throw new Error("Product variant not found!");
+      if (variant.stock < item.quantity) {
+        throw new Error(
+          `Product variant out of stock! Available: ${variant.stock}`,
+        );
       }
 
       // স্টক আপডেট
@@ -28,7 +34,7 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       await variant.save({ session });
     }
 
-    // ৩. অর্ডার তৈরি করা
+    // ৩. অর্ডারের ডাটা প্রস্তুত করা
     const orderData = {
       user: userId,
       items: cart.items,
@@ -36,8 +42,8 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       shippingAddress: payload.shippingAddress,
       payment: {
         method: payload.paymentMethod,
-        status: payload.paymentMethod === "cod" ? "pending" : "paid", // যদি বিকাশ/নগদ অলরেডি সাকসেস হয়
-        transactionId: payload.transactionId,
+        status: payload.paymentMethod === "cod" ? "pending" : "paid",
+        transactionId: payload.transactionId || null,
         date: new Date(),
       },
       deliveryType: payload.deliveryType,
@@ -45,7 +51,7 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
 
     const order = await OrderModel.create([orderData], { session });
 
-    // ৪. অর্ডার সাকসেসফুল হলে কার্ট খালি করা
+    // ৪. অর্ডার সাকসেসফুল হলে কার্ট একদম খালি করে দেওয়া
     await CartModel.findOneAndUpdate(
       { user: userId },
       { items: [], totalAmount: 0, totalItems: 0 },
@@ -63,6 +69,20 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
   }
 };
 
+const getMyOrdersFromDB = async (userId: string) => {
+  return await OrderModel.find({ user: userId })
+    .populate("items.product", "name thumbnail slug")
+    .sort("-createdAt"); // নতুন অর্ডার আগে দেখাবে
+};
+
+const getSingleOrderFromDB = async (orderId: string, userId: string) => {
+  return await OrderModel.findOne({ _id: orderId, user: userId })
+    .populate("items.product")
+    .populate("items.variant");
+};
+
 export const OrderService = {
   createOrderIntoDB,
+  getMyOrdersFromDB,
+  getSingleOrderFromDB,
 };
