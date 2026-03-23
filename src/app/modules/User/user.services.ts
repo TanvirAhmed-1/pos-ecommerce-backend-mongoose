@@ -39,7 +39,7 @@ const updateUser = async (id: string, data: Partial<IUser>) => {
   }
 
   const result = await UserModel.findByIdAndUpdate(id, data, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   });
 
@@ -48,6 +48,9 @@ const updateUser = async (id: string, data: Partial<IUser>) => {
 };
 
 const getUserProfileBD = async (id: string) => {
+  if (!id) {
+    throw new Error("User ID is undefined");
+  }
   const user = await UserModel.findById(id);
   if (!user) throw new Error("User not found");
   return user;

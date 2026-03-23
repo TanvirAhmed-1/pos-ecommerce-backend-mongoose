@@ -2,11 +2,10 @@ import slugify from "slugify";
 import { ICategory } from "./category.interface";
 import { CategoryModel } from "./category.model";
 
+
 const createCategoryIntoDB = async (payload: ICategory) => {
   let level = 0;
   let ancestors: any[] = [];
-
-  // যদি সাব-ক্যাটাগরি হয়, তবে প্যারেন্টের ডাটা চেক করবে
   if (payload.parentCategory) {
     const parent = await CategoryModel.findById(payload.parentCategory);
     if (!parent) throw new Error("Parent category not found!");
@@ -41,18 +40,85 @@ const getFeaturedCategories = async () => {
 };
 
 const getAllCategories = async () => {
-  return await CategoryModel.find()
-    .populate("parentCategory", "name")
-    .sort({ createdAt: -1 });
+  const allCategories = await CategoryModel.find().lean();
+
+  const categoryMap: Record<string, any> = {};
+  allCategories.forEach((cat) => {
+    categoryMap[cat._id.toString()] = {
+      ...cat,
+      children: [],
+    };
+  });
+
+  const tree: any[] = [];
+
+  // ২. ট্রিতে কনভার্ট করার সময় চাইল্ড থেকে parentCategory সরিয়ে ফেলা
+  allCategories.forEach((cat) => {
+    const currentCat = categoryMap[cat._id.toString()];
+
+    if (cat.parentCategory) {
+      const parentId = cat.parentCategory.toString();
+
+      if (categoryMap[parentId]) {
+        // চাইল্ড হিসেবে পুশ করার আগে parentCategory ফিল্ডটি ডিলিট করে দিন
+        const { parentCategory, ...childData } = currentCat;
+        categoryMap[parentId].children.push(childData);
+      }
+    } else {
+      // রুট ক্যাটাগরিগুলো সরাসরি ট্রিতে যাবে
+      tree.push(currentCat);
+    }
+  });
+
+  return tree;
+};
+
+const updateCategoryInDB = async (id: string, payload: Partial<any>) => {
+  const isCategoryExists = await CategoryModel.findById(id);
+
+  if (!isCategoryExists) {
+    throw new Error("Category not found!");
+  }
+
+  const { name, parentId, ...updateData } = payload;
+
+  if (name) {
+    updateData.name = name;
+    updateData.slug = slugify(name, { lower: true, strict: true });
+  }
+  if (parentId !== undefined) {
+    if (parentId === null) {
+      updateData.parentCategory = null;
+      updateData.level = 0;
+      updateData.ancestors = [];
+    } else {
+      const newParent = await CategoryModel.findById(parentId);
+      if (!newParent) throw new Error("New parent category not found!");
+
+      updateData.parentCategory = newParent._id;
+      updateData.level = newParent.level + 1;
+      updateData.ancestors = [...newParent.ancestors, newParent._id];
+    }
+
+    // নোট: এখানে একটি recursive function দরকার হতে পারে যদি আপনি চান
+    // এই ক্যাটাগরির চাইল্ডদেরও অটোমেটিক আপডেট করতে।
+  }
+
+  const result = await CategoryModel.findByIdAndUpdate(id, updateData, {
+    returnDocument: "after",
+    runValidators: true,
+  });
+
+  return result;
 };
 
 const deleteCategoryFromDB = async (id: string) => {
   const category = await CategoryModel.findById(id);
   if (!category) throw new Error("Category not found");
 
-  // চেক করুন এই ক্যাটাগরির আন্ডারে কোনো চাইল্ড আছে কি না
   const hasChild = await CategoryModel.findOne({ parentCategory: id });
-  if (hasChild) throw new Error("Cannot delete! This category has sub-categories.");
+  if (hasChild)
+    throw new Error("Cannot delete! This category has sub-categories.");
 
   return await CategoryModel.findByIdAndDelete(id);
 };
@@ -62,5 +128,6 @@ export const CategoryService = {
   getNavCategories,
   getFeaturedCategories,
   getAllCategories,
-  deleteCategoryFromDB
+  deleteCategoryFromDB,
+  updateCategoryInDB,
 };

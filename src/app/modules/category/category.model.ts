@@ -22,7 +22,6 @@ const categorySchema = new Schema<ICategory>(
 );
 
 // Indexing for faster search
-categorySchema.index({ slug: 1 });
 categorySchema.index({ level: 1 });
 
 export const CategoryModel = model<ICategory>('Category', categorySchema);

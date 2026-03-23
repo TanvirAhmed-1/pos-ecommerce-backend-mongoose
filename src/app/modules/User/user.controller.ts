@@ -27,8 +27,9 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 
 // GET USER BY ID
 const getUserProfile = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user.id;
-  const result = await UserService.getUserProfileBD(userId);
+  const id = req.user.id;
+  console.log("Fetching user profile for ID:", id);
+  const result = await UserService.getUserProfileBD(id);
 
   res.status(status.OK).json({
     success: true,
