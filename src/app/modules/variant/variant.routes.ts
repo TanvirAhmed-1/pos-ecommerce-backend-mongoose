@@ -1,31 +1,24 @@
-import { Router } from "express";
+import express from "express";
 import { VariantController } from "./variant.controller";
-import validateData from "../../middlewares/validateData";
-import { createVariantSchema } from "./variant.validation";
 import auth from "../../middlewares/auth";
+import validateData from "../../middlewares/validateData";
+import { createVariantSchema, updateVariantSchema } from "./variant.validation";
 
-const router = Router();
+const router = express.Router();
+router.use(auth());
 
 router.post(
   "/create-variant",
-  auth("admin"),
   validateData(createVariantSchema),
   VariantController.createVariant,
 );
-
+router.get("/all-variants", VariantController.getAllVariantsWithProductDetails);
 router.get("/product/:productId", VariantController.getProductVariants);
-
-// আপডেট রাউটটি আপনার কোডে মিসিং ছিল
 router.patch(
   "/update-variant/:id",
-  auth("admin"),
+  validateData(updateVariantSchema),
   VariantController.updateVariant,
 );
-
-router.delete(
-  "/delete-variant/:id",
-  auth("admin"),
-  VariantController.deleteVariant,
-);
-
+router.patch("/update-variant-stock/:id", VariantController.updateVariantStock);
+router.delete("/delete-variant/:id", VariantController.deleteVariant);
 export const VariantRoutes = router;

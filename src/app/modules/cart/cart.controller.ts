@@ -4,7 +4,8 @@ import catchAsync from "../../utils/catchAsync";
 import { CartService } from "./cart.services";
 
 const addToCart = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
+
   const result = await CartService.addToCartIntoDB(userId, req.body);
 
   res.status(httpStatus.OK).json({
@@ -15,7 +16,7 @@ const addToCart = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyCart = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const result = await CartService.getMyCartFromDB(userId);
 
   res.status(httpStatus.OK).json({
@@ -26,7 +27,7 @@ const getMyCart = catchAsync(async (req: Request, res: Response) => {
 });
 
 const removeItem = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const { variantId } = req.params;
   const result = await CartService.removeItemFromCartDB(
     userId,
@@ -41,7 +42,7 @@ const removeItem = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateQuantity = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const { variantId, action } = req.body; // action: 'increment' অথবা 'decrement'
   const result = await CartService.updateQuantityInCartDB(
     userId,

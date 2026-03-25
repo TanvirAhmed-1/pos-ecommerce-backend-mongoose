@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 import { IVariant } from "./variant.interface";
-
+import "../attribute/attribute.model";
 const variantSchema = new Schema<IVariant>(
   {
     product: {
@@ -8,8 +8,16 @@ const variantSchema = new Schema<IVariant>(
       ref: "Product",
       required: [true, "Product ID is required"],
     },
-    attributeName: { type: String, required: true, trim: true },
-    attributeValue: { type: String, required: true, trim: true },
+    attributes: [
+      {
+        attribute: {
+          type: Schema.Types.ObjectId,
+          ref: "Attribute",
+          required: true,
+        },
+        value: { type: String, required: true },
+      },
+    ],
     price: { type: Number, required: true, min: 0 },
     stock: { type: Number, required: true, default: 0, min: 0 },
     sku: {
