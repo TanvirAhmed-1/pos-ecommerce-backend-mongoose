@@ -24,7 +24,7 @@ const loginUserBD = async (email: string, password: string) => {
 
   const payload = { id: user._id, email: user.email, role: user.role };
   const token = jwt.sign(payload, config.jwtSecret as string, {
-    expiresIn: "1h",
+    expiresIn: "72h",
   });
 
   return { user, token };

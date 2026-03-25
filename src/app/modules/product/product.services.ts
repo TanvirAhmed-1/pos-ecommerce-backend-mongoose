@@ -1,5 +1,7 @@
+import httpStatus from "http-status";
 import { IProduct } from "./product.interface";
 import { ProductModel } from "./product.model";
+import AppError from "../../errors/AppError";
 
 const createProductIntoDB = async (payload: IProduct) => {
   const result = await ProductModel.create(payload);
@@ -7,43 +9,68 @@ const createProductIntoDB = async (payload: IProduct) => {
 };
 
 const getAllProductsFromDB = async (query: Record<string, unknown>) => {
-  const { searchTerm, category, subcategory, brand, minPrice, maxPrice, sort } = query;
-  
-  let filter: any = { isActive: true };
+  const {
+    searchTerm,
+    category,
+    subcategory,
+    brand,
+    minPrice,
+    maxPrice,
+    sort,
+    page = 1,
+    limit = 20,
+  } = query;
 
-  // ডাইনামিক সার্চ লজিক (Name, Keywords, or Slug)
+  let filter: any = { isActive: true };
   if (searchTerm) {
     filter.$or = [
       { name: { $regex: searchTerm, $options: "i" } },
-      { keywords: { $elemMatch: { $regex: searchTerm, $options: "i" } } },
+      { slug: { $regex: searchTerm, $options: "i" } },
+      { keywords: { $in: [new RegExp(searchTerm as string, "i")] } }, 
     ];
   }
 
-  // ফিল্টারিং লজিক
+  // ২. ফিল্টারিং লজিক
   if (category) filter.category = category;
   if (subcategory) filter.subcategory = subcategory;
   if (brand) filter.brand = brand;
-  
-  // প্রাইজ রেঞ্জ ফিল্টার
+
+  // ৩. প্রাইজ রেঞ্জ ফিল্টার
   if (minPrice || maxPrice) {
     filter.salePrice = {};
     if (minPrice) filter.salePrice.$gte = Number(minPrice);
     if (maxPrice) filter.salePrice.$lte = Number(maxPrice);
   }
 
-  const productQuery = ProductModel.find(filter)
-    .populate("category")
-    .populate("brand")
-    .populate("productVariants"); // ভার্চুয়াল পপুলেট
+  // ৪. পেজিনেশন লজিক (Skip and Limit)
+  const skip = (Number(page) - 1) * Number(limit);
 
-  // সর্টিং (Default: Newest first)
+  const productQuery = ProductModel.find(filter)
+    .populate("category", "name slug")
+    .populate("brand", "name logo")
+    .populate("productVariants")
+    .skip(skip)
+    .limit(Number(limit));
+
+  // ৫. সর্টিং (Default: Newest first)
   if (sort) {
     productQuery.sort(sort as string);
   } else {
     productQuery.sort("-createdAt");
   }
 
-  return await productQuery;
+  const result = await productQuery;
+  const total = await ProductModel.countDocuments(filter);
+
+  return {
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPage: Math.ceil(total / Number(limit)),
+    },
+    data: result,
+  };
 };
 
 const getSingleProductBySlugFromDB = async (slug: string) => {
@@ -51,8 +78,10 @@ const getSingleProductBySlugFromDB = async (slug: string) => {
     .populate("category")
     .populate("brand")
     .populate("productVariants");
-    
-  if (!result) throw new Error("Product not found!");
+
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, "Product not found!");
+  }
   return result;
 };
 
@@ -61,13 +90,19 @@ const updateProductInDB = async (id: string, payload: Partial<IProduct>) => {
     new: true,
     runValidators: true,
   });
-  if (!result) throw new Error("Product not found to update");
+
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, "Product not found to update");
+  }
   return result;
 };
 
 const deleteProductFromDB = async (id: string) => {
   const result = await ProductModel.findByIdAndDelete(id);
-  if (!result) throw new Error("Product not found to delete");
+
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, "Product not found to delete");
+  }
   return result;
 };
 

@@ -24,7 +24,6 @@ const variantSchema = new Schema<IVariant>(
   { timestamps: true },
 );
 
-// SKU এবং Product ID দিয়ে ইনডেক্সিং যাতে সার্চ ফাস্ট হয়
 variantSchema.index({ sku: 1, product: 1 });
 
 export const VariantModel = model<IVariant>("Variant", variantSchema);

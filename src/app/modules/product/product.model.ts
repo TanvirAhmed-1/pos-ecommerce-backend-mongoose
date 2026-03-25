@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 import slugify from "slugify";
 import { IProduct } from "./product.interface";
+import "../variant/variant.model";
 
 const productSchema = new Schema<IProduct>(
   {
@@ -47,9 +48,8 @@ const productSchema = new Schema<IProduct>(
   },
 );
 
-// --- Virtual for Variants ---
 productSchema.virtual("productVariants", {
-  ref: "Variant",
+  ref: "Variant", 
   localField: "_id",
   foreignField: "product",
 });

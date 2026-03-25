@@ -18,6 +18,6 @@ router.get("/all-categories", CategoryController.getAllCategories);
 // Public Routes (For Homepage & Nav)
 router.get("/nav-categories", CategoryController.getNavCategories);
 router.get("/featured-categories", CategoryController.getFeaturedCategories);
-router.put("/g/:id", CategoryController.updateCategory);
+router.put("/update-category/:id", CategoryController.updateCategory);
 router.delete("/delete-category/:id", CategoryController.deleteCategory);
 export const CategoryRoutes = router;
