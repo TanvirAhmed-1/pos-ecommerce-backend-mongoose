@@ -4,7 +4,7 @@ import catchAsync from "../../utils/catchAsync";
 import { WishlistService } from "./wishlist.services";
 
 const addProductToWishlist = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const { productId } = req.body;
   const result = await WishlistService.addProductToWishlistDB(
     userId,
@@ -19,7 +19,7 @@ const addProductToWishlist = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyWishlist = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const result = await WishlistService.getMyWishlistFromDB(userId);
 
   res.status(httpStatus.OK).json({
@@ -31,17 +31,13 @@ const getMyWishlist = catchAsync(async (req: Request, res: Response) => {
 
 const removeProductFromWishlist = catchAsync(
   async (req: Request, res: Response) => {
-    const userId = (req.user as any)._id;
+    const userId = req.user.id;
     const { productId } = req.body;
-    const result = await WishlistService.removeProductFromWishlistDB(
-      userId,
-      productId,
-    );
+    await WishlistService.removeProductFromWishlistDB(userId, productId);
 
     res.status(httpStatus.OK).json({
       success: true,
-      message: "Product removed from wishlist successfully",
-      data: result,
+      message: "Product deleted from wishlist successfully",
     });
   },
 );

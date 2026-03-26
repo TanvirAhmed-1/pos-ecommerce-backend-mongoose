@@ -6,6 +6,7 @@ import { ProductRoutes } from "../modules/product/product.route";
 import { VariantRoutes } from "../modules/variant/variant.routes";
 import { AttributeRoutes } from "../modules/attribute/attribute.route";
 import { CartRoutes } from "../modules/cart/cart.routes";
+import { WishlistRoutes } from "../modules/wishlist/wishlist.route";
 
 const routet = Router();
 const allRouters = [
@@ -15,7 +16,8 @@ const allRouters = [
   ProductRoutes,
   VariantRoutes,
   AttributeRoutes,
-  CartRoutes
+  CartRoutes,
+  WishlistRoutes,
 ];
 
 allRouters.forEach((router) => {
