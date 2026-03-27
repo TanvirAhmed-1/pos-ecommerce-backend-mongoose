@@ -81,8 +81,53 @@ const getSingleOrderFromDB = async (orderId: string, userId: string) => {
     .populate("items.variant");
 };
 
+
+const updateOrderStatusInDB = async (orderId: string, status: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const order = await OrderModel.findById(orderId).session(session);
+    if (!order) {
+      throw new Error("Order not found!");
+    }
+
+    // যদি অর্ডার অলরেডি ডেলিভারড হয়ে যায়, তবে আর ক্যানসেল করা যাবে না
+    if (order.orderStatus === 'delivered' && status === 'cancelled') {
+      throw new Error("Delivered order cannot be cancelled!");
+    }
+
+    // যদি অর্ডার ক্যানসেল করা হয়, তবে স্টক ফেরত দেওয়া (Restock)
+    if (status === 'cancelled' && order.orderStatus !== 'cancelled') {
+      for (const item of order.items) {
+        await VariantModel.findByIdAndUpdate(
+          item.variant,
+          { $inc: { stock: item.quantity } },
+          { session }
+        );
+      }
+    }
+
+    // স্ট্যাটাস আপডেট
+    const result = await OrderModel.findByIdAndUpdate(
+      orderId,
+      { orderStatus: status },
+      { new: true, session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    return result;
+  } catch (error: any) {
+    await session.abortTransaction();
+    session.endSession();
+    throw new Error(error.message);
+  }
+};
+
 export const OrderService = {
   createOrderIntoDB,
   getMyOrdersFromDB,
   getSingleOrderFromDB,
+  updateOrderStatusInDB,
 };

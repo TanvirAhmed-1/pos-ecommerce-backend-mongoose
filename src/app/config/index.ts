@@ -20,6 +20,20 @@ const config = {
     saltRounds: Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
   },
   jwtSecret: required(process.env.JWT_SECRET, "JWT_SECRET"),
+  
+  // --- bKash Configuration ---
+  bkash_app_key: required(process.env.BKASH_APP_KEY, "BKASH_APP_KEY"),
+  bkash_app_secret: required(process.env.BKASH_APP_SECRET, "BKASH_APP_SECRET"),
+  bkash_username: required(process.env.BKASH_USERNAME, "BKASH_USERNAME"),
+  bkash_password: required(process.env.BKASH_PASSWORD, "BKASH_PASSWORD"),
+  
+  bkash_grant_token_url: required(process.env.BKASH_GRANT_TOKEN_URL, "BKASH_GRANT_TOKEN_URL"),
+  bkash_create_payment_url: required(process.env.BKASH_CREATE_PAYMENT_URL, "BKASH_CREATE_PAYMENT_URL"),
+  bkash_execute_payment_url: required(process.env.BKASH_EXECUTE_PAYMENT_URL, "BKASH_EXECUTE_PAYMENT_URL"),
+
+  // --- URLs ---
+  backend_url: required(process.env.BACKEND_URL, "BACKEND_URL"),
+  frontend_url: required(process.env.FRONTEND_URL, "FRONTEND_URL"),
 };
 
 export default config;

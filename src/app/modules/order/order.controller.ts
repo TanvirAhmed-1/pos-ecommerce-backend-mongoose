@@ -4,7 +4,7 @@ import catchAsync from "../../utils/catchAsync";
 import { OrderService } from "./order.services";
 
 const createOrder = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const result = await OrderService.createOrderIntoDB(userId, req.body);
 
   res.status(httpStatus.CREATED).json({
@@ -15,7 +15,7 @@ const createOrder = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyOrders = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const result = await OrderService.getMyOrdersFromDB(userId);
 
   res.status(httpStatus.OK).json({
@@ -26,7 +26,7 @@ const getMyOrders = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getSingleOrder = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const { id } = req.params;
   const result = await OrderService.getSingleOrderFromDB(id as string, userId);
 
@@ -36,8 +36,22 @@ const getSingleOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status } = req.body; 
+
+  const result = await OrderService.updateOrderStatusInDB(id as string, status);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: `Order status updated to ${status}`,
+    data: result,
+  });
+});
+
 export const OrderController = {
   createOrder,
   getMyOrders,
   getSingleOrder,
+  updateOrderStatus,
 };
