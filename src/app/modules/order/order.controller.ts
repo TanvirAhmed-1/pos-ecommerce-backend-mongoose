@@ -2,18 +2,55 @@ import { Request, Response } from "express";
 import httpStatus from "http-status";
 import catchAsync from "../../utils/catchAsync";
 import { OrderService } from "./order.services";
+import { OrderModel } from "./order.model";
+import { PaymentServices } from "../payment/payment.services";
+import AppError from "../../errors/AppError";
 
 const createOrder = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
-  const result = await OrderService.createOrderIntoDB(userId, req.body);
+  const { paymentMethod } = req.body;
 
+
+  const order = await OrderService.createOrderIntoDB(userId, req.body);
+
+  // ২. যদি পেমেন্ট মেথড বিকাশ (bKash) হয়
+  if (paymentMethod === "bkash") {
+    try {
+      // পেমেন্ট ইননিশিয়েট করা (অ্যামাউন্টসহ পাস করুন)
+      const bkashURL = await PaymentServices.initBkashPayment(
+        order._id.toString(),
+        userId,
+        order.totalAmount, // সরাসরি অর্ডার অবজেক্ট থেকে অ্যামাউন্ট পাঠানো ভালো
+      );
+
+      return res.status(httpStatus.OK).json({
+        success: true,
+        message: "Order created successfully. Redirecting to bKash...",
+        data: bkashURL, // ফ্রন্টএন্ডে এটি 'paymentURL' হিসেবে রিসিভ হবে
+      });
+    } catch (error: any) {
+      // যদি বিকাশ গেটওয়েতে কোনো সমস্যা হয়, তবে অর্ডার স্ট্যাটাস আপডেট করুন
+      await OrderModel.findByIdAndUpdate(order._id, {
+        "payment.status": "failed",
+        orderStatus: "cancelled", // পেমেন্ট শুরুই না হলে অর্ডারটি ক্যানসেলড ধরা নিরাপদ
+      });
+
+      // সিনিয়ররা সাধারণত আসল এররটি লগে রাখে কিন্তু ইউজারকে ক্লিন মেসেজ দেয়
+      console.error("bKash Error:", error.message);
+      throw new AppError(
+        httpStatus.BAD_GATEWAY,
+        "Unable to initiate bKash payment. Please try again later.",
+      );
+    }
+  }
+
+  // ৩. যদি Cash on Delivery (COD) হয়
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: "successfully created order",
-    data: result,
+    message: "Order placed successfully with Cash on Delivery",
+    data: order,
   });
 });
-
 const getMyOrders = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
   const result = await OrderService.getMyOrdersFromDB(userId);
@@ -38,7 +75,7 @@ const getSingleOrder = catchAsync(async (req: Request, res: Response) => {
 
 const updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { status } = req.body; 
+  const { status } = req.body;
 
   const result = await OrderService.updateOrderStatusInDB(id as string, status);
 

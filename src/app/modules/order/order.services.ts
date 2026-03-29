@@ -8,33 +8,12 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
   session.startTransaction();
 
   try {
-    // ১. কার্ট থেকে অর্ডারের জন্য প্রয়োজনীয় ডাটা নিয়ে আসা
     const cart = await CartModel.findOne({ user: userId }).session(session);
     if (!cart || cart.items.length === 0) {
-      throw new Error(
-        "Cart is empty! Please add items to cart before checkout.",
-      );
+      throw new Error("Cart is empty!");
     }
 
-    // ২. প্রতিটি আইটেমের স্টক চেক এবং কমানো
-    for (const item of cart.items) {
-      const variant = await VariantModel.findById(item.variant).session(
-        session,
-      );
-
-      if (!variant) throw new Error("Product variant not found!");
-      if (variant.stock < item.quantity) {
-        throw new Error(
-          `Product variant out of stock! Available: ${variant.stock}`,
-        );
-      }
-
-      // স্টক আপডেট
-      variant.stock -= item.quantity;
-      await variant.save({ session });
-    }
-
-    // ৩. অর্ডারের ডাটা প্রস্তুত করা
+    // অর্ডার ডাটা প্রস্তুত (পেমেন্ট স্ট্যাটাস সবসময় pending থাকবে শুরুতে)
     const orderData = {
       user: userId,
       items: cart.items,
@@ -42,25 +21,34 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       shippingAddress: payload.shippingAddress,
       payment: {
         method: payload.paymentMethod,
-        status: payload.paymentMethod === "cod" ? "pending" : "paid",
-        transactionId: payload.transactionId || null,
+        status: "pending",
         date: new Date(),
       },
       deliveryType: payload.deliveryType,
+      orderStatus: "pending",
     };
 
     const order = await OrderModel.create([orderData], { session });
 
-    // ৪. অর্ডার সাকসেসফুল হলে কার্ট একদম খালি করে দেওয়া
-    await CartModel.findOneAndUpdate(
-      { user: userId },
-      { items: [], totalAmount: 0, totalItems: 0 },
-      { session },
-    );
+    // যদি COD হয়, তবে কার্ট খালি এবং স্টক এখনই কমিয়ে ফেলুন
+    if (payload.paymentMethod === "cod") {
+      for (const item of cart.items) {
+        await VariantModel.findByIdAndUpdate(
+          item.variant,
+          { $inc: { stock: -item.quantity } },
+          { session },
+        );
+      }
+      // কার্ট খালি করা
+      await CartModel.findOneAndUpdate(
+        { user: userId },
+        { items: [], totalAmount: 0, totalItems: 0 },
+        { session },
+      );
+    }
 
     await session.commitTransaction();
     session.endSession();
-
     return order[0];
   } catch (error: any) {
     await session.abortTransaction();
@@ -81,7 +69,6 @@ const getSingleOrderFromDB = async (orderId: string, userId: string) => {
     .populate("items.variant");
 };
 
-
 const updateOrderStatusInDB = async (orderId: string, status: string) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -93,17 +80,17 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
     }
 
     // যদি অর্ডার অলরেডি ডেলিভারড হয়ে যায়, তবে আর ক্যানসেল করা যাবে না
-    if (order.orderStatus === 'delivered' && status === 'cancelled') {
+    if (order.orderStatus === "delivered" && status === "cancelled") {
       throw new Error("Delivered order cannot be cancelled!");
     }
 
     // যদি অর্ডার ক্যানসেল করা হয়, তবে স্টক ফেরত দেওয়া (Restock)
-    if (status === 'cancelled' && order.orderStatus !== 'cancelled') {
+    if (status === "cancelled" && order.orderStatus !== "cancelled") {
       for (const item of order.items) {
         await VariantModel.findByIdAndUpdate(
           item.variant,
           { $inc: { stock: item.quantity } },
-          { session }
+          { session },
         );
       }
     }
@@ -112,7 +99,7 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
     const result = await OrderModel.findByIdAndUpdate(
       orderId,
       { orderStatus: status },
-      { new: true, session }
+      { new: true, session },
     );
 
     await session.commitTransaction();
