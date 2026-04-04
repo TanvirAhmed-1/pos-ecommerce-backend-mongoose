@@ -5,7 +5,6 @@ import { CartModel } from "../cart/cart.model";
 import { PaymentModel } from "./payment.model";
 import { VariantModel } from "../variant/variant.model";
 
-// ১. প্রাইভেট হেডার ফাংশন
 const getBkashHeaders = async () => {
   try {
     const { data } = await axios.post(
@@ -16,15 +15,13 @@ const getBkashHeaders = async () => {
       },
       {
         headers: {
-          username: config.bkash_username, // 'sandboxTokenizedUser'
-          password: config.bkash_password, // 'sandboxTokenizedPassword02'
+          username: config.bkash_username, 
+          password: config.bkash_password,
           "Accept": "application/json",
           "Content-Type": "application/json",
         },
       }
     );
-
-    // ✅ সিনিয়র টিপস: স্যান্ডবক্সে 'Bearer ' ছাড়া শুধু টোকেন পাঠানোই সবচেয়ে সেফ
     return {
       "content-type": "application/json",
       "accept": "application/json",
@@ -32,13 +29,11 @@ const getBkashHeaders = async () => {
       "x-app-key": config.bkash_app_key, 
     };
   } catch (error: any) {
-    // এখানে এররটি প্রিন্ট করলে আপনি আসল কারণ দেখতে পাবেন (যেমন: Username/Password wrong)
-    console.error("❌ bKash Token Generation Failed:", error.response?.data || error.message);
+    console.error(" bKash Token Generation Failed:", error.response?.data || error.message);
     throw new Error("bKash Authentication Failed (401)");
   }
 };
 
-// ২. পেমেন্ট শুরু করা
 const initBkashPayment = async (orderId: string, userId: string, amount: number) => {
   const headers = await getBkashHeaders();
   const { data } = await axios.post(
@@ -57,7 +52,6 @@ const initBkashPayment = async (orderId: string, userId: string, amount: number)
 
   if (data.statusCode !== "0000") throw new Error(data.statusMessage);
 
-  // পেমেন্ট হিস্ট্রি সেভ (Audit Trail এর জন্য জরুরি)
   await PaymentModel.create({
     transactionId: `${orderId}_${Date.now()}`,
     order: orderId,
@@ -68,7 +62,6 @@ const initBkashPayment = async (orderId: string, userId: string, amount: number)
   return data.bkashURL;
 };
 
-// ৩. পেমেন্ট কনফার্ম করা ও স্টক কমানো
 const executeBkashPayment = async (paymentID: string, userId: string) => {
   const headers = await getBkashHeaders();
   const { data: executeData } = await axios.post(
@@ -80,13 +73,11 @@ const executeBkashPayment = async (paymentID: string, userId: string) => {
   if (executeData.statusCode === "0000") {
     const orderId = executeData.merchantInvoiceNumber;
 
-    // পেমেন্ট ও অর্ডার আপডেট
     await Promise.all([
       PaymentModel.findOneAndUpdate({ order: orderId }, { status: "SUCCESS", gatewayTrxId: executeData.trxID }),
       OrderModel.findByIdAndUpdate(orderId, { "payment.status": "paid", orderStatus: "processing" })
     ]);
 
-    // ইনভেন্টরি (স্টক) আপডেট
     const order = await OrderModel.findById(orderId);
     if (order) {
       for (const item of order.items) {
@@ -94,7 +85,6 @@ const executeBkashPayment = async (paymentID: string, userId: string) => {
       }
     }
 
-    // কার্ট খালি করা
     await CartModel.findOneAndUpdate({ user: userId }, { items: [], totalAmount: 0 });
 
     return { trxID: executeData.trxID };
