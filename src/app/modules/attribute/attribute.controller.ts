@@ -12,7 +12,7 @@ const createAttribute = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllAttributes = catchAsync(async (req: Request, res: Response) => {
+const getAllAttributes = catchAsync(async (_req: Request, res: Response) => {
   const result = await AttributeService.getAllAttributesFromDB();
   res.status(httpStatus.OK).json({
     success: true,

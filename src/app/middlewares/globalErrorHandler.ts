@@ -55,7 +55,7 @@ import handleDuplicateError from "../errors/handleDuplicateError";
 import AppError from "../errors/AppError";
 import { TErrorSources } from "../interfaces/errors";
 
-const globalErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
+const globalErrorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 
   let statusCode = 500;
   let message = "Something went wrong!";

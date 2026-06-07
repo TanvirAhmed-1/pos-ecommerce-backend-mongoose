@@ -41,7 +41,7 @@ const initBkashPayment = async (orderId: string, userId: string, amount: number)
     {
       mode: "0011",
       payerReference: userId.toString(),
-      callbackURL: `${config.backend_url}/api/v1/payment/bkash-callback`,
+      callbackURL: `${config.backend_url}/api/payment/bkash-callback`,
       amount: amount.toFixed(2),
       currency: "BDT",
       intent: "sale",

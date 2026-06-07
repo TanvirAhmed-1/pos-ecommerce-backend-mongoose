@@ -17,7 +17,7 @@ const productSchema = new Schema<IProduct>(
     keywords: [{ type: String }],
 
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
-    subcategory: { type: Schema.Types.ObjectId, ref: "SubCategory" },
+    subcategory: { type: Schema.Types.ObjectId, ref: "Category" },
     brand: { type: Schema.Types.ObjectId, ref: "Brand" },
 
     thumbnail: { type: String, required: true },

@@ -86,9 +86,20 @@ const updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllOrders = catchAsync(async (_req: Request, res: Response) => {
+  const result = await OrderService.getAllOrdersFromDB();
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: "All orders retrieved successfully",
+    data: result,
+  });
+});
+
 export const OrderController = {
   createOrder,
   getMyOrders,
   getSingleOrder,
   updateOrderStatus,
+  getAllOrders,
 };

@@ -12,7 +12,7 @@ const createSection = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getHomeSections = catchAsync(async (req: Request, res: Response) => {
+const getHomeSections = catchAsync(async (_req: Request, res: Response) => {
   const result = await SectionService.getHomeSectionsFromDB();
   res.status(httpStatus.OK).json({
     success: true,

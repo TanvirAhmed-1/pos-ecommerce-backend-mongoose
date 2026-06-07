@@ -30,7 +30,7 @@ const cartSchema = new Schema<ICart>(
 );
 
 // --- Pre-save Hook for Totals ---
-cartSchema.pre("save", async function (next) {
+cartSchema.pre("save", async function () {
   this.totalItems = this.items.reduce((acc, item) => acc + item.quantity, 0);
   this.totalAmount = this.items.reduce((acc, item) => acc + item.totalPrice, 0);
 });

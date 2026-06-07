@@ -41,7 +41,7 @@ import config from "../config";
 import catchAsync from "../utils/catchAsync";
 
 const auth = (...requiredRoles: string[]) => {
-  return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  return catchAsync(async (req: Request, _res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 
     // ১. টোকেন চেক

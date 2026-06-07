@@ -19,8 +19,14 @@ router.post(
 
 router.patch(
   "/update-status/:id",
-  // auth("admin"),
+  auth("admin", "superadmin"),
   OrderController.updateOrderStatus,
+);
+
+router.get(
+  "/all-orders",
+  auth("admin", "superadmin"),
+  OrderController.getAllOrders,
 );
 
 export const OrderRoutes = router;

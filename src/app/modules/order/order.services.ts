@@ -112,9 +112,18 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
   }
 };
 
+const getAllOrdersFromDB = async () => {
+  return await OrderModel.find()
+    .populate("user", "name email phone")
+    .populate("items.product", "name thumbnail slug")
+    .populate("items.variant")
+    .sort("-createdAt");
+};
+
 export const OrderService = {
   createOrderIntoDB,
   getMyOrdersFromDB,
   getSingleOrderFromDB,
   updateOrderStatusInDB,
+  getAllOrdersFromDB,
 };

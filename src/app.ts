@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 // Application Routes
 app.use("/api", BaseRouter);
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.send("Server is running!");
 });
 

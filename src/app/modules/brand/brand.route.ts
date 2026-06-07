@@ -5,9 +5,9 @@ import { BrandValidation } from "./brand.validation";
 import { BrandController } from "./brand.controller";
 
 const router = Router();
-router.use(auth());
 router.post(
   "/create-brand",
+  auth("admin", "superadmin"),
   validateData(BrandValidation.createBrandZodSchema),
   BrandController.createBrand,
 );
@@ -16,10 +16,15 @@ router.get("/all-brands", BrandController.getAllBrands);
 
 router.patch(
   "/update-brand/:id",
+  auth("admin", "superadmin"),
   validateData(BrandValidation.updateBrandZodSchema),
   BrandController.updateBrand,
 );
 
-router.delete("/delete-brand/:id", BrandController.deleteBrand);
+router.delete(
+  "/delete-brand/:id",
+  auth("admin", "superadmin"),
+  BrandController.deleteBrand,
+);
 
 export const BrandRoutes = router;

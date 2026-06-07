@@ -12,12 +12,12 @@ router.post(
   UserController.createUser,
 );
 router.post("/login", UserController.loginUser);
-router.get("/get-all-users", UserController.getAllUsers);
-router.get("/get-profile", auth("user"), UserController.getUserProfile);
-router.patch("/update-profile", auth("user"), UserController.updateUser);
+router.get("/get-all-users", auth("admin", "superadmin"), UserController.getAllUsers);
+router.get("/get-profile", auth(), UserController.getUserProfile);
+router.patch("/update-profile", auth(), UserController.updateUser);
 router.delete(
   "/delete-user/:id",
-  auth("admin,user"),
+  auth("admin", "superadmin", "user"),
   UserController.deleteUser,
 );
 

@@ -16,10 +16,10 @@
 // export default validateData;
 
 import { NextFunction, Request, Response } from "express";
-import { AnyZodObject } from "zod";
+import { ZodTypeAny } from "zod";
 
-const validateData = (schema: AnyZodObject) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+const validateData = (schema: ZodTypeAny) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     try {
       // এটি সবথেকে সেফ পদ্ধতি কারণ এটি body, params, এবং query একসাথে চেক করে
       await schema.parseAsync({

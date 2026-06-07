@@ -8,6 +8,9 @@ import { AttributeRoutes } from "../modules/attribute/attribute.route";
 import { CartRoutes } from "../modules/cart/cart.routes";
 import { WishlistRoutes } from "../modules/wishlist/wishlist.route";
 import { OrderRoutes } from "../modules/order/order.routes";
+import { SliderRoutes } from "../modules/slider/slider.routes";
+import { SectionRoutes } from "../modules/section/section.routes";
+import { PaymentRoutes } from "../modules/payment/payment.route";
 
 const routet = Router();
 const allRouters = [
@@ -20,6 +23,9 @@ const allRouters = [
   CartRoutes,
   WishlistRoutes,
   OrderRoutes,
+  SliderRoutes,
+  SectionRoutes,
+  PaymentRoutes,
 ];
 
 allRouters.forEach((router) => {

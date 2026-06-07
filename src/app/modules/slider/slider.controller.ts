@@ -12,7 +12,7 @@ const createSlider = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getHomeSliders = catchAsync(async (req: Request, res: Response) => {
+const getHomeSliders = catchAsync(async (_req: Request, res: Response) => {
   const result = await SliderService.getActiveSlidersFromDB();
   res.status(httpStatus.OK).json({
     success: true,
@@ -20,7 +20,7 @@ const getHomeSliders = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllSliders = catchAsync(async (req: Request, res: Response) => {
+const getAllSliders = catchAsync(async (_req: Request, res: Response) => {
   const result = await SliderService.getAllSlidersForAdminFromDB();
   res.status(httpStatus.OK).json({
     success: true,

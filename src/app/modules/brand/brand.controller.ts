@@ -12,7 +12,7 @@ const createBrand = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllBrands = catchAsync(async (req: Request, res: Response) => {
+const getAllBrands = catchAsync(async (_req: Request, res: Response) => {
   const result = await BrandService.getAllBrandsFromDB();
   res.status(status.OK).json({
     success: true,
