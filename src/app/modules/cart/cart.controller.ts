@@ -59,7 +59,7 @@ const updateQuantity = catchAsync(async (req: Request, res: Response) => {
 
 // ৫. পুরো কার্ট একবারে খালি করা
 const clearCart = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as any)._id;
+  const userId = req.user.id;
   const result = await CartService.clearCartFromDB(userId);
 
   res.status(httpStatus.OK).json({

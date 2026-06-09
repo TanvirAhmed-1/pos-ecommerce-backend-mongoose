@@ -1,9 +1,20 @@
 import httpStatus from "http-status";
 import { IProduct } from "./product.interface";
 import { ProductModel } from "./product.model";
+import { CompanyModel } from "../company/company.model";
 import AppError from "../../errors/AppError";
 
 const createProductIntoDB = async (payload: IProduct) => {
+  if (!payload.company) {
+    const company = await CompanyModel.findOne({ isActive: true });
+    if (!company) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Active company configuration not found! Please create a company configuration first."
+      );
+    }
+    payload.company = company._id as any;
+  }
   const result = await ProductModel.create(payload);
   return result;
 };
@@ -26,7 +37,7 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
     filter.$or = [
       { name: { $regex: searchTerm, $options: "i" } },
       { slug: { $regex: searchTerm, $options: "i" } },
-      { keywords: { $in: [new RegExp(searchTerm as string, "i")] } }, 
+      { "seo.metaKeywords": { $in: [new RegExp(searchTerm as string, "i")] } }, 
     ];
   }
 
@@ -46,6 +57,7 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   const productQuery = ProductModel.find(filter)
+    .populate("company", "name logo socialMedia email phone address")
     .populate("category", "name slug")
     .populate("brand", "name logo")
     .populate("productVariants")
@@ -75,6 +87,7 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
 
 const getSingleProductBySlugFromDB = async (slug: string) => {
   const result = await ProductModel.findOne({ slug, isActive: true })
+    .populate("company", "name logo socialMedia email phone address")
     .populate("category")
     .populate("brand")
     .populate("productVariants");

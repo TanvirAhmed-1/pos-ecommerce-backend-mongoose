@@ -11,6 +11,9 @@ import { OrderRoutes } from "../modules/order/order.routes";
 import { SliderRoutes } from "../modules/slider/slider.routes";
 import { SectionRoutes } from "../modules/section/section.routes";
 import { PaymentRoutes } from "../modules/payment/payment.route";
+import { CompanyRoutes } from "../modules/company/company.route";
+import { PageRoutes } from "../modules/page/page.route";
+import { FooterRoutes } from "../modules/footer/footer.route";
 
 const routet = Router();
 const allRouters = [
@@ -26,6 +29,9 @@ const allRouters = [
   SliderRoutes,
   SectionRoutes,
   PaymentRoutes,
+  CompanyRoutes,
+  PageRoutes,
+  FooterRoutes,
 ];
 
 allRouters.forEach((router) => {

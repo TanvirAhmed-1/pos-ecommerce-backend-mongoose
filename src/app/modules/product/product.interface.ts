@@ -6,9 +6,19 @@ export interface IProduct extends Document {
   shortDescription: string;
   fullDescription: string;
   description?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  keywords: string[];
+  seo?: {
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string[];
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImage?: string;
+    twitterTitle?: string;
+    twitterDescription?: string;
+    twitterImage?: string;
+    canonicalUrl?: string;
+  };
+  company?: Types.ObjectId;
   category: Types.ObjectId;
   subcategory?: Types.ObjectId;
   brand?: Types.ObjectId;

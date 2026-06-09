@@ -28,17 +28,23 @@ const createProductSchema = z.object({
       description: z.string().optional(),
 
       // SEO Validation
-      metaTitle: z
-        .string()
-        .max(70, "Meta title should be under 70 characters")
+      seo: z
+        .object({
+          metaTitle: z.string().max(70, "Meta title should be under 70 characters").optional(),
+          metaDescription: z.string().max(160, "Meta description should be under 160 characters").optional(),
+          metaKeywords: z.array(z.string()).default([]),
+          ogTitle: z.string().optional(),
+          ogDescription: z.string().optional(),
+          ogImage: z.string().url("Invalid OG image URL").optional(),
+          twitterTitle: z.string().optional(),
+          twitterDescription: z.string().optional(),
+          twitterImage: z.string().url("Invalid Twitter image URL").optional(),
+          canonicalUrl: z.string().url("Invalid canonical URL").optional(),
+        })
         .optional(),
-      metaDescription: z
-        .string()
-        .max(160, "Meta description should be under 160 characters")
-        .optional(),
-      keywords: z.array(z.string()).default([]),
 
       // Relations
+      company: objectIdSchema.optional(),
       category: objectIdSchema,
       subcategory: objectIdSchema.optional(),
       brand: objectIdSchema.optional(),
@@ -90,9 +96,21 @@ const updateProductSchema = z.object({
     shortDescription: z.string().min(10).optional(),
     fullDescription: z.string().optional(),
     description: z.string().optional(),
-    metaTitle: z.string().optional(),
-    metaDescription: z.string().optional(),
-    keywords: z.array(z.string()).optional(),
+    seo: z
+      .object({
+        metaTitle: z.string().max(70).optional(),
+        metaDescription: z.string().max(160).optional(),
+        metaKeywords: z.array(z.string()).optional(),
+        ogTitle: z.string().optional(),
+        ogDescription: z.string().optional(),
+        ogImage: z.string().url().optional(),
+        twitterTitle: z.string().optional(),
+        twitterDescription: z.string().optional(),
+        twitterImage: z.string().url().optional(),
+        canonicalUrl: z.string().url().optional(),
+      })
+      .optional(),
+    company: objectIdSchema.optional(),
     category: objectIdSchema.optional(),
     subcategory: objectIdSchema.optional(),
     brand: objectIdSchema.optional(),

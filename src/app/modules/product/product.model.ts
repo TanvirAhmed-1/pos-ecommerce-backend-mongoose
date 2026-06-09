@@ -3,6 +3,22 @@ import slugify from "slugify";
 import { IProduct } from "./product.interface";
 import "../variant/variant.model";
 
+const seoSchema = new Schema(
+  {
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    metaKeywords: [{ type: String }],
+    ogTitle: { type: String },
+    ogDescription: { type: String },
+    ogImage: { type: String },
+    twitterTitle: { type: String },
+    twitterDescription: { type: String },
+    twitterImage: { type: String },
+    canonicalUrl: { type: String },
+  },
+  { _id: false }
+);
+
 const productSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true, trim: true },
@@ -12,9 +28,8 @@ const productSchema = new Schema<IProduct>(
     fullDescription: { type: String, required: true },
     description: { type: String },
 
-    metaTitle: { type: String, trim: true },
-    metaDescription: { type: String, trim: true },
-    keywords: [{ type: String }],
+    seo: { type: seoSchema },
+    company: { type: Schema.Types.ObjectId, ref: "Company", required: true },
 
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
     subcategory: { type: Schema.Types.ObjectId, ref: "Category" },
@@ -64,6 +79,10 @@ productSchema
     this._isWishlisted = value;
   });
 
+productSchema.virtual("socialMedia").get(function (this: any) {
+  return this.company?.socialMedia || [];
+});
+
 // --- Pre-save Hooks (Professional Syntax) ---
 productSchema.pre("save", async function (this: IProduct) {
   if (this.isModified("name")) {
@@ -80,6 +99,6 @@ productSchema.pre("save", async function (this: IProduct) {
 });
 
 // --- Search Index ---
-productSchema.index({ name: "text", slug: 1, keywords: "text" });
+productSchema.index({ name: "text", slug: 1, "seo.metaKeywords": "text" });
 
 export const ProductModel = model<IProduct>("Product", productSchema);
