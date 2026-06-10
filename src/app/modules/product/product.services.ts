@@ -2,6 +2,8 @@ import httpStatus from "http-status";
 import { IProduct } from "./product.interface";
 import { ProductModel } from "./product.model";
 import { CompanyModel } from "../company/company.model";
+import { CategoryModel } from "../category/category.model";
+import { Brand } from "../brand/brand.model";
 import AppError from "../../errors/AppError";
 
 const createProductIntoDB = async (payload: IProduct) => {
@@ -14,7 +16,37 @@ const createProductIntoDB = async (payload: IProduct) => {
       );
     }
     payload.company = company._id as any;
+  } else {
+    const companyExists = await CompanyModel.findById(payload.company);
+    if (!companyExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Company not found!");
+    }
   }
+
+  // Category validation
+  if (payload.category) {
+    const categoryExists = await CategoryModel.findById(payload.category);
+    if (!categoryExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Category not found!");
+    }
+  }
+
+  // Subcategory validation
+  if (payload.subcategory) {
+    const subcategoryExists = await CategoryModel.findById(payload.subcategory);
+    if (!subcategoryExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Subcategory not found!");
+    }
+  }
+
+  // Brand validation
+  if (payload.brand) {
+    const brandExists = await Brand.findById(payload.brand);
+    if (!brandExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Brand not found!");
+    }
+  }
+
   const result = await ProductModel.create(payload);
   return result;
 };
@@ -99,6 +131,38 @@ const getSingleProductBySlugFromDB = async (slug: string) => {
 };
 
 const updateProductInDB = async (id: string, payload: Partial<IProduct>) => {
+  // Company validation
+  if (payload.company) {
+    const companyExists = await CompanyModel.findById(payload.company);
+    if (!companyExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Company not found!");
+    }
+  }
+
+  // Category validation
+  if (payload.category) {
+    const categoryExists = await CategoryModel.findById(payload.category);
+    if (!categoryExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Category not found!");
+    }
+  }
+
+  // Subcategory validation
+  if (payload.subcategory) {
+    const subcategoryExists = await CategoryModel.findById(payload.subcategory);
+    if (!subcategoryExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Subcategory not found!");
+    }
+  }
+
+  // Brand validation
+  if (payload.brand) {
+    const brandExists = await Brand.findById(payload.brand);
+    if (!brandExists) {
+      throw new AppError(httpStatus.NOT_FOUND, "Brand not found!");
+    }
+  }
+
   const result = await ProductModel.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,

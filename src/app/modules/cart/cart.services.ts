@@ -1,11 +1,15 @@
 import { CartModel } from "./cart.model";
 import { VariantModel } from "../variant/variant.model";
+import { ProductModel } from "../product/product.model";
 
 const addToCartIntoDB = async (
   userId: string,
   payload: { product: string; variant: string; quantity: number },
 ) => {
   const { product, variant, quantity } = payload;
+
+  const productData = await ProductModel.findById(product);
+  if (!productData) throw new Error("Product not found!");
 
   const variantData = await VariantModel.findById(variant);
   if (!variantData) throw new Error("Variant not found!");

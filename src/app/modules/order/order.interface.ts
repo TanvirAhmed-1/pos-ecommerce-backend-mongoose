@@ -23,4 +23,12 @@ export interface IOrder extends Document {
   };
   orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   deliveryType: "home_delivery" | "pickup";
+  // New Design Fields
+  orderNumber?: string;
+  address?: Types.ObjectId;
+  subtotal?: number;
+  discount?: number;
+  vat?: number;
+  deliveryCharge?: number;
+  paymentStatus?: string;
 }

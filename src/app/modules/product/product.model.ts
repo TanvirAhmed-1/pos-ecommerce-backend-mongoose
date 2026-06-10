@@ -55,6 +55,17 @@ const productSchema = new Schema<IProduct>(
       default: "published",
     },
     isActive: { type: Boolean, default: true },
+    
+    // New Design Fields
+    sku: { type: String },
+    costPrice: { type: Number, default: 0 },
+    regularPrice: { type: Number, default: 0 },
+    resellerPrice: { type: Number, default: 0 },
+    discountPrice: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false },
+    isTrending: { type: Boolean, default: false },
+    isBestSeller: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
   },
   {
     timestamps: true,

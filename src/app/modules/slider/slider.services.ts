@@ -14,11 +14,15 @@ const getAllSlidersForAdminFromDB = async () => {
 };
 
 const updateSliderInDB = async (id: string, payload: Partial<ISlider>) => {
-  return await SliderModel.findByIdAndUpdate(id, payload, { new: true });
+  const result = await SliderModel.findByIdAndUpdate(id, payload, { new: true });
+  if (!result) throw new Error("Slider not found to update!");
+  return result;
 };
 
 const deleteSliderFromDB = async (id: string) => {
-  return await SliderModel.findByIdAndDelete(id);
+  const result = await SliderModel.findByIdAndDelete(id);
+  if (!result) throw new Error("Slider not found to delete!");
+  return result;
 };
 
 export const SliderService = {

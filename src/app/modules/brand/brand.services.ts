@@ -29,10 +29,14 @@ const getSingleBrandFromDB = async (id: string) => {
 };
 
 const updateBrandInDB = async (id: string, payload: Partial<IBrand>) => {
-  return await Brand.findByIdAndUpdate(id, payload, {
+  const result = await Brand.findByIdAndUpdate(id, payload, {
     returnDocument: "after",
     runValidators: true,
   });
+  if (!result) {
+    throw new Error("Brand not found to update");
+  }
+  return result;
 };
 
 const deleteBrandFromDB = async (id: string) => {

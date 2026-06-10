@@ -51,6 +51,14 @@ const orderSchema = new Schema<IOrder>(
       enum: ["home_delivery", "pickup"],
       default: "home_delivery",
     },
+    // New Design Fields
+    orderNumber: { type: String },
+    address: { type: Schema.Types.ObjectId, ref: "Address" },
+    subtotal: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
+    vat: { type: Number, default: 0 },
+    deliveryCharge: { type: Number, default: 0 },
+    paymentStatus: { type: String, default: "pending" },
   },
   { timestamps: true },
 );

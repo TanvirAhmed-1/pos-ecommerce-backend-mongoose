@@ -29,7 +29,4 @@ const pageSchema = new Schema<IPage>(
   { timestamps: true }
 );
 
-// Indexing slug for fast lookups
-pageSchema.index({ slug: 1 });
-
 export const PageModel = model<IPage>("Page", pageSchema);

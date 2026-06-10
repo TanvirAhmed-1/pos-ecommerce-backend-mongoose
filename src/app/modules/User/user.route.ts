@@ -17,7 +17,7 @@ router.get("/get-profile", auth(), UserController.getUserProfile);
 router.patch("/update-profile", auth(), UserController.updateUser);
 router.delete(
   "/delete-user/:id",
-  auth("admin", "superadmin", "user"),
+  auth("admin", "superadmin", "customer", "reseller"),
   UserController.deleteUser,
 );
 

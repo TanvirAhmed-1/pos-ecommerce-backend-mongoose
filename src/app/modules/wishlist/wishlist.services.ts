@@ -1,6 +1,12 @@
 import { WishlistModel } from "./wishlist.model";
+import { ProductModel } from "../product/product.model";
 
 const addProductToWishlistDB = async (userId: string, productId: string) => {
+  const isProductExist = await ProductModel.findById(productId);
+  if (!isProductExist) {
+    throw new Error("Product not found!");
+  }
+
   let wishlist = await WishlistModel.findOne({ user: userId });
 
   if (!wishlist) {

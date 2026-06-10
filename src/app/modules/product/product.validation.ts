@@ -83,6 +83,17 @@ const createProductSchema = z.object({
         .enum(["published", "hidden", "out_of_stock"])
         .default("published"),
       isActive: z.boolean().default(true),
+
+      // New Design Fields
+      sku: z.string().optional(),
+      costPrice: z.number().nonnegative().optional(),
+      regularPrice: z.number().nonnegative().optional(),
+      resellerPrice: z.number().nonnegative().optional(),
+      discountPrice: z.number().nonnegative().optional(),
+      isFeatured: z.boolean().default(false).optional(),
+      isTrending: z.boolean().default(false).optional(),
+      isBestSeller: z.boolean().default(false).optional(),
+      isNewArrival: z.boolean().default(false).optional(),
     })
     .refine((data) => data.salePrice <= data.basePrice, {
       message: "Sale price must be less than or equal to base price",
@@ -123,6 +134,15 @@ const updateProductSchema = z.object({
     totalStock: z.number().int().nonnegative().optional(),
     visibility: z.enum(["published", "hidden", "out_of_stock"]).optional(),
     isActive: z.boolean().optional(),
+    sku: z.string().optional(),
+    costPrice: z.number().nonnegative().optional(),
+    regularPrice: z.number().nonnegative().optional(),
+    resellerPrice: z.number().nonnegative().optional(),
+    discountPrice: z.number().nonnegative().optional(),
+    isFeatured: z.boolean().optional(),
+    isTrending: z.boolean().optional(),
+    isBestSeller: z.boolean().optional(),
+    isNewArrival: z.boolean().optional(),
   }),
 });
 

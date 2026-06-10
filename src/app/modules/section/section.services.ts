@@ -1,7 +1,14 @@
+import { ProductModel } from "../product/product.model";
 import { ISection } from "./section.interface";
 import { SectionModel } from "./section.model";
 
 const createSectionIntoDB = async (payload: ISection) => {
+  if (payload.products && payload.products.length > 0) {
+    const count = await ProductModel.countDocuments({ _id: { $in: payload.products } });
+    if (count !== payload.products.length) {
+      throw new Error("One or more product IDs are invalid!");
+    }
+  }
   const result = await SectionModel.create(payload);
   return result;
 };
@@ -18,6 +25,13 @@ const getHomeSectionsFromDB = async () => {
 };
 
 const updateSectionInDB = async (id: string, payload: Partial<ISection>) => {
+  if (payload.products && payload.products.length > 0) {
+    const count = await ProductModel.countDocuments({ _id: { $in: payload.products } });
+    if (count !== payload.products.length) {
+      throw new Error("One or more product IDs are invalid!");
+    }
+  }
+
   const result = await SectionModel.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,

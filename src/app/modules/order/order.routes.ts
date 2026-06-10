@@ -6,13 +6,13 @@ import { OrderValidation } from "./order.validation";
 
 const router = Router();
 router.use(auth());
-router.get("/my-orders", auth("user"), OrderController.getMyOrders);
+router.get("/my-orders", auth("customer", "reseller"), OrderController.getMyOrders);
 
-router.get("/order/:id", auth("user"), OrderController.getSingleOrder);
+router.get("/order/:id", auth("customer", "reseller"), OrderController.getSingleOrder);
 
 router.post(
   "/checkout",
-  auth("user"),
+  auth("customer", "reseller"),
   validateData(OrderValidation.createOrderSchema),
   OrderController.createOrder,
 );

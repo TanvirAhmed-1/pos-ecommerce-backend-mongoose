@@ -34,6 +34,16 @@ export interface IProduct extends Document {
   totalReviews: number;
   visibility: "published" | "hidden" | "out_of_stock";
   isActive: boolean;
+  // New Design Fields
+  sku?: string;
+  costPrice?: number;
+  regularPrice?: number;
+  resellerPrice?: number;
+  discountPrice?: number;
+  isFeatured?: boolean;
+  isTrending?: boolean;
+  isBestSeller?: boolean;
+  isNewArrival?: boolean;
   // Custom Properties for Logic
   _isWishlisted?: boolean;
   isWishlisted?: boolean;

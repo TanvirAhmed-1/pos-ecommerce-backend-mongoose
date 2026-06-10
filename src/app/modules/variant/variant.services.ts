@@ -7,6 +7,15 @@ import { IVariant } from "./variant.interface";
 import { VariantModel } from "./variant.model";
 
 const createVariantIntoDB = async (payload: IVariant) => {
+  // ১. প্রোডাক্টের অস্তিত্ব চেক করা
+  const productExists = await ProductModel.findById(payload.product);
+  if (!productExists) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      `Product with ID ${payload.product} not found!`,
+    );
+  }
+
   for (const attr of payload.attributes) {
     const attributeExists = await AttributeModel.findById(attr.attribute);
 
@@ -75,7 +84,11 @@ const updateVariantInDB = async (id: string, payload: Partial<IVariant>) => {
     runValidators: true,
   });
 
-  if (result && payload.stock !== undefined) {
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, "Variant not found!");
+  }
+
+  if (payload.stock !== undefined) {
     await updateProductTotalStock(result.product.toString());
   }
   return result;

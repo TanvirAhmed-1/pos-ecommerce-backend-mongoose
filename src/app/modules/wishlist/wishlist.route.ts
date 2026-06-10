@@ -6,18 +6,18 @@ import { WishlistValidation } from "./wishlist.validation";
 
 const router = Router();
 
-router.get("/my-wishlist", auth("user"), WishlistController.getMyWishlist);
+router.get("/my-wishlist", auth("customer", "reseller"), WishlistController.getMyWishlist);
 
 router.post(
   "/add-wishlist",
-  auth("user"),
+  auth("customer", "reseller"),
   validateData(WishlistValidation.toggleWishlistSchema),
   WishlistController.addProductToWishlist,
 );
 
 router.delete(
   "/remove-wishlist/:productId",
-  auth("user"),
+  auth("customer", "reseller"),
   WishlistController.removeProductFromWishlist,
 );
 

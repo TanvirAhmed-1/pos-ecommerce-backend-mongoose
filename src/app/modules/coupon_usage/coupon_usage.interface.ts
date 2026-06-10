@@ -1,0 +1,7 @@
+import { Document, Types } from "mongoose";
+
+export interface ICouponUsage extends Document {
+  coupon: Types.ObjectId;
+  user: Types.ObjectId;
+  order: Types.ObjectId;
+}

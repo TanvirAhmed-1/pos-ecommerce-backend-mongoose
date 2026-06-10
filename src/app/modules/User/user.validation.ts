@@ -6,8 +6,9 @@ export const createUserSchema = z.object({
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     phone: z.string().min(10, "Phone must be valid"),
-    gender: z.enum(["male", "female", "other"]),
-    address: z.string().optional(),
-    role: z.enum(["user", "admin", "superadmin"]).optional(),
+    role: z.enum(["customer", "reseller", "admin", "superadmin"]).optional(),
+    companyName: z.string().optional(),
+    tradeLicense: z.string().optional(),
+    resellerDiscount: z.number().optional(),
   }),
 });

@@ -9,11 +9,12 @@ const userSchema: Schema<IUser> = new Schema(
     phone: { type: String, required: true },
     role: {
       type: String,
-      enum: ["user", "admin", "superadmin"],
-      default: "user",
+      enum: ["customer", "reseller", "admin", "superadmin"],
+      default: "customer",
     },
-    gender: { type: String, enum: ["male", "female", "other"], required: true },
-    address: { type: String },
+    companyName: { type: String },
+    tradeLicense: { type: String },
+    resellerDiscount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
