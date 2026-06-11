@@ -14,7 +14,9 @@ const createCategoryIntoDB = async (payload: ICategory) => {
     ancestors = [...parent.ancestors, parent._id];
   }
 
-  const slug = slugify(payload.name, { lower: true, strict: true });
+  const slug = payload.slug
+    ? slugify(payload.slug, { lower: true, strict: true })
+    : slugify(payload.name, { lower: true, strict: true });
 
   const result = await CategoryModel.create({
     ...payload,
@@ -80,12 +82,18 @@ const updateCategoryInDB = async (id: string, payload: Partial<any>) => {
     throw new Error("Category not found!");
   }
 
-  const { name, parentId, ...updateData } = payload;
+  const { name, parentId, slug, ...updateData } = payload;
 
   if (name) {
     updateData.name = name;
+  }
+
+  if (slug) {
+    updateData.slug = slugify(slug, { lower: true, strict: true });
+  } else if (name) {
     updateData.slug = slugify(name, { lower: true, strict: true });
   }
+
   if (parentId !== undefined) {
     if (parentId === null) {
       updateData.parentCategory = null;
@@ -99,9 +107,6 @@ const updateCategoryInDB = async (id: string, payload: Partial<any>) => {
       updateData.level = newParent.level + 1;
       updateData.ancestors = [...newParent.ancestors, newParent._id];
     }
-
-    // নোট: এখানে একটি recursive function দরকার হতে পারে যদি আপনি চান
-    // এই ক্যাটাগরির চাইল্ডদেরও অটোমেটিক আপডেট করতে।
   }
 
   const result = await CategoryModel.findByIdAndUpdate(id, updateData, {

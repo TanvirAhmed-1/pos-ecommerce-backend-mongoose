@@ -34,6 +34,14 @@ const config = {
   // --- URLs ---
   backend_url: required(process.env.BACKEND_URL, "BACKEND_URL"),
   frontend_url: required(process.env.FRONTEND_URL, "FRONTEND_URL"),
+
+  // --- Super Admin Config ---
+  superAdmin: {
+    name: required(process.env.SUPER_ADMIN_NAME, "SUPER_ADMIN_NAME"),
+    email: required(process.env.SUPER_ADMIN_EMAIL, "SUPER_ADMIN_EMAIL"),
+    password: required(process.env.SUPER_ADMIN_PASSWORD, "SUPER_ADMIN_PASSWORD"),
+    phone: required(process.env.SUPER_ADMIN_PHONE, "SUPER_ADMIN_PHONE"),
+  },
 };
 
 export default config;

@@ -19,6 +19,14 @@ const loginUserBD = async (email: string, password: string) => {
   const user = await UserModel.findOne({ email }).select("+password");
   if (!user) throw new Error("Invalid email or password");
 
+  if (user.status === "blocked") {
+    throw new Error("Your account has been blocked!");
+  }
+
+  if (user.status === "inactive") {
+    throw new Error("Your account is inactive!");
+  }
+
   const isPasswordMatch = await bcrypt.compare(password, user.password);
   if (!isPasswordMatch) throw new Error("Invalid email or password");
 

@@ -6,5 +6,6 @@ export const createCategoryZodSchema = z.object({
     parentId: z.string().optional(),
     isActive: z.boolean().optional(),
     isFeatured: z.boolean().optional(),
+    slug: z.string().optional(),
   }),
 });

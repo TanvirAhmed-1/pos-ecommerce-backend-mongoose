@@ -1,3 +1,5 @@
+export type UserStatus = "active" | "inactive" | "blocked";
+
 export type IUser = {
   name: string;
   email: string;
@@ -9,5 +11,7 @@ export type IUser = {
   companyName?: string;
   tradeLicense?: string;
   resellerDiscount?: number;
+  status?: UserStatus;
 };
+
 

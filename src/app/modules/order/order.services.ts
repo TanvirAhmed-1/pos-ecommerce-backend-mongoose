@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { CartModel } from "../cart/cart.model";
 import { OrderModel } from "./order.model";
 import { VariantModel } from "../variant/variant.model";
+import { InvoiceService } from "../invoice/invoice.services";
 
 const createOrderIntoDB = async (userId: string, payload: any) => {
   const session = await mongoose.startSession();
@@ -29,6 +30,9 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
     };
 
     const order = await OrderModel.create([orderData], { session });
+
+    // Generate Invoice automatically for the order
+    await InvoiceService.createInvoiceFromOrder(order[0]._id.toString(), session);
 
     // যদি COD হয়, তবে কার্ট খালি এবং স্টক এখনই কমিয়ে ফেলুন
     if (payload.paymentMethod === "cod") {
@@ -101,6 +105,10 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
       { orderStatus: status },
       { new: true, session },
     );
+
+    if (status === "cancelled") {
+      await InvoiceService.updateInvoicePaymentStatus(orderId, "cancelled");
+    }
 
     await session.commitTransaction();
     session.endSession();

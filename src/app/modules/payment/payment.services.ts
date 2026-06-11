@@ -4,6 +4,7 @@ import { OrderModel } from "../order/order.model";
 import { CartModel } from "../cart/cart.model";
 import { PaymentModel } from "./payment.model";
 import { VariantModel } from "../variant/variant.model";
+import { InvoiceService } from "../invoice/invoice.services";
 
 const getBkashHeaders = async () => {
   try {
@@ -75,7 +76,8 @@ const executeBkashPayment = async (paymentID: string, userId: string) => {
 
     await Promise.all([
       PaymentModel.findOneAndUpdate({ order: orderId }, { status: "SUCCESS", gatewayTrxId: executeData.trxID }),
-      OrderModel.findByIdAndUpdate(orderId, { "payment.status": "paid", orderStatus: "processing" })
+      OrderModel.findByIdAndUpdate(orderId, { "payment.status": "paid", orderStatus: "processing" }),
+      InvoiceService.updateInvoicePaymentStatus(orderId, "paid")
     ]);
 
     const order = await OrderModel.findById(orderId);

@@ -1,0 +1,310 @@
+# POS & E-commerce Backend Database Design & ERD
+
+This document provides a comprehensive overview and a detailed Entity-Relationship Diagram (ERD) of the MongoDB database schema (using Mongoose) for the POS and E-commerce backend application.
+
+---
+
+## 1. Entity-Relationship Diagram (ERD)
+
+Below is the visual database schema representation using Mermaid. It highlights the collection schemas, field types, and their relationships (References).
+
+```mermaid
+erDiagram
+    User ||--o| Cart : "has (1:1)"
+    User ||--o| Wishlist : "has (1:1)"
+    User ||--o{ Order : "places (1:N)"
+    User ||--o{ Payment : "makes (1:N)"
+    
+    Company ||--o{ Product : "manages (1:N)"
+    
+    Category ||--o{ Product : "primary (1:N)"
+    Category ||--o{ Product : "subcategory (1:N)"
+    Category ||--o{ Category : "parentCategory / ancestors (1:N)"
+    
+    Brand ||--o{ Product : "labels (1:N)"
+    
+    Product ||--o{ Variant : "has (1:N)"
+    Product ||--o{ Section : "grouped in (M:N)"
+    Product ||--o{ Wishlist : "bookmarked in (M:N)"
+    
+    Variant ||--o{ Attribute : "uses (M:N)"
+    
+    Order ||--o| Payment : "settled by (1:1)"
+    Order ||--o| Invoice : "generates (1:1)"
+    User ||--o{ Invoice : "owns (1:N)"
+
+    User {
+        ObjectId _id PK
+        string name
+        string email UK
+        string password "Hidden by default"
+        string phone
+        string role "user | admin | superadmin"
+        string gender "male | female | other"
+        string address
+        date createdAt
+        date updatedAt
+    }
+
+    Company {
+        ObjectId _id PK
+        string name
+        string logo
+        string favicon
+        string email
+        string phone
+        string address
+        array socialMedia "platform, url"
+        string googleMap
+        object seo "metaTitle, metaDescription, keywords..."
+        string description
+        string copyright
+        boolean isActive
+    }
+
+    Category {
+        ObjectId _id PK
+        string name UK
+        string slug UK
+        number level "0 for Main, 1 for Sub"
+        ObjectId parentCategory FK "Self-ref Category"
+        array ancestors FK "Array of self-ref Category"
+        boolean isActive
+        boolean isFeatured
+    }
+
+    Brand {
+        ObjectId _id PK
+        string name UK
+        string slug UK
+        string logo
+        string description
+        string website
+        boolean isFeatured
+        boolean isActive
+    }
+
+    Product {
+        ObjectId _id PK
+        string name
+        string slug UK
+        string shortDescription
+        string fullDescription
+        string description
+        object seo "metaTitle, metaDescription, keywords..."
+        ObjectId company FK "ref Company"
+        ObjectId category FK "ref Category"
+        ObjectId subcategory FK "ref Category"
+        ObjectId brand FK "ref Brand"
+        string thumbnail
+        array images
+        number basePrice
+        number salePrice
+        number discountPercentage
+        number vat
+        boolean hasVariants
+        number totalStock
+        number averageRating
+        number totalReviews
+        string visibility "published | hidden | out_of_stock"
+        boolean isActive
+    }
+
+    Variant {
+        ObjectId _id PK
+        ObjectId product FK "ref Product"
+        array attributes "attribute: ObjectId, value: string"
+        number price
+        number stock
+        string sku UK
+        boolean isActive
+    }
+
+    Attribute {
+        ObjectId _id PK
+        string name UK "e.g., Color, Size"
+        array values "e.g., ['Red', 'Blue']"
+        boolean isActive
+    }
+
+    Cart {
+        ObjectId _id PK
+        ObjectId user FK UK "ref User"
+        array items "product, variant, quantity, price, totalPrice"
+        number totalItems
+        number totalAmount
+    }
+
+    Wishlist {
+        ObjectId _id PK
+        ObjectId user FK UK "ref User"
+        array products FK "refs [Product]"
+    }
+
+    Order {
+        ObjectId _id PK
+        ObjectId user FK "ref User"
+        array items "product, variant, quantity, price"
+        number totalAmount
+        object shippingAddress "fullName, phone, address, city"
+        object payment "method, status, transactionId, date"
+        string orderStatus "pending | processing | shipped | delivered | cancelled"
+        string deliveryType "home_delivery | pickup"
+    }
+
+    Payment {
+        ObjectId _id PK
+        string transactionId UK
+        string gatewayTrxId
+        ObjectId order FK "ref Order"
+        ObjectId user FK "ref User"
+        number amount
+        string currency
+        string paymentGateway "BKASH | NAGAD | SSL"
+        string status "PENDING | SUCCESS | FAILED | CANCELLED"
+        object paymentData "Gateway payload data"
+    }
+
+    Invoice {
+        ObjectId _id PK
+        string invoiceNumber UK
+        ObjectId order FK "ref Order"
+        ObjectId user FK "ref User"
+        ObjectId payment FK "ref Payment"
+        date invoiceDate
+        number totalAmount
+        number subtotal
+        number discount
+        number vat
+        number deliveryCharge
+        string paymentMethod "bkash | nagad | cod | online_payment"
+        string paymentStatus "pending | paid | failed | cancelled"
+        array items "product, variant, quantity, price"
+        object shippingAddress "fullName, phone, address, city"
+    }
+
+    Section {
+        ObjectId _id PK
+        string title
+        string slug UK
+        string description
+        array products FK "refs [Product]"
+        boolean isActive
+        number displayOrder
+    }
+
+    Slider {
+        ObjectId _id PK
+        string title
+        string image
+        string link
+        number priority
+        boolean isActive
+    }
+
+    Page {
+        ObjectId _id PK
+        string title
+        string slug UK
+        string content
+        string group "Quick Links | Policies..."
+        boolean isActive
+        object seo
+    }
+```
+
+---
+
+## 2. Collection Details
+
+### 1. `User` (Collection: `users`)
+Manages all user accounts and roles.
+- **Indexes**: `email` (unique)
+- **Key Fields**:
+  - `role`: Role separation (`user` / `admin` / `superadmin`).
+  - `password`: Kept secure with `{ select: false }`.
+
+### 2. `Company` (Collection: `companies`)
+Contains site settings, details, social media URLs, and default branding configurations. Usually treated as a singleton.
+- **Embeds**: `socialMedia` (Array of Platform & URL), `seo` (SEO details).
+
+### 3. `Category` (Collection: `categories`)
+Allows multi-level category structures using parent references and materialized paths (`ancestors`).
+- **Indexes**: `level`, `slug` (unique), `name` (unique).
+- **Key Fields**:
+  - `parentCategory`: Reference to another category.
+  - `ancestors`: Precomputed category path for fast tree operations.
+
+### 4. `Brand` (Collection: `brands`)
+Manages product manufacturers/brands.
+- **Indexes**: `slug` (unique), `name` (unique).
+
+### 5. `Product` (Collection: `products`)
+Core store catalog items.
+- **Indexes**: Text index on `{ name: "text", slug: 1, "seo.metaKeywords": "text" }` for fast searching.
+- **Key Fields**:
+  - `company`, `category`, `subcategory`, `brand`: Relations.
+  - `hasVariants`: Flags whether variants must be resolved.
+  - `productVariants` (Virtual): Populates all matching `Variant` documents.
+
+### 6. `Variant` (Collection: `variants`)
+Holds actual SKUs, pricing, and stock inventory for specific sizes/colors/attributes of a Product.
+- **Indexes**: Unique index on `{ sku: 1, product: 1 }`.
+- **Relations**: References `Product` and `Attribute`.
+
+### 7. `Attribute` (Collection: `attributes`)
+Configures variants' categories like "Color" or "Size".
+- **Indexes**: `name` (unique).
+
+### 8. `Cart` (Collection: `carts`)
+Stores active shopping carts per customer.
+- **Key Fields**:
+  - `user` (1-to-1 unique ref to User).
+  - Pre-save hook automatically updates `totalItems` and `totalAmount`.
+
+### 9. `Wishlist` (Collection: `wishlists`)
+Stores user bookmarks.
+- **Key Fields**:
+  - `user` (1-to-1 unique ref to User).
+  - `products`: References `[Product]`.
+
+### 10. `Order` (Collection: `orders`)
+Captures purchases.
+- **Key Fields**:
+  - `user`, `items` (Product & Variant details), `payment` state, `orderStatus`.
+
+### 11. `Payment` (Collection: `payments`)
+Independent transaction ledger for auditing payment gateways.
+- **Indexes**: `transactionId` (unique).
+- **Key Fields**:
+  - References both `user` and `order`.
+  - Gateway payload logs kept under `paymentData`.
+
+### 12. `Section` (Collection: `sections`)
+Creates custom homepage rows (e.g. "Best Sellers", "New Arrivals") referencing specific items.
+- **Key Fields**:
+  - `products`: References `[Product]`.
+
+### 13. `Slider` (Collection: `sliders`)
+Hero section slideshow banner assets.
+- **Indexes**: `priority` (for sorting).
+
+### 14. `Page` (Collection: `pages`)
+Dynamic CMS content (e.g., terms of service, about page).
+- **Indexes**: `slug` (unique).
+
+### 15. `Invoice` (Collection: `invoices`)
+Captures generated billing details and snapshots for client orders.
+- **Indexes**: `invoiceNumber` (unique).
+- **Key Fields**:
+  - `invoiceNumber`: Unique invoice identification format.
+  - `order`, `user`, `payment`: References.
+  - `paymentStatus`: Matches the status of the order transaction.
+
+---
+
+## 3. Relational Integration Patterns
+
+1. **Category Hierarchy**: Tree structures use parent IDs and `ancestors` array.
+2. **Product Catalog**: Products fetch variants asynchronously using a Mongoose virtual ref (`productVariants`).
+3. **Cart & Order Flow**: Embedded items store current snapshots (prices, quantities) to avoid losing transaction history if variants are modified later.
