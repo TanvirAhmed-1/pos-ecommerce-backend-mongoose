@@ -11,5 +11,6 @@ export const createUserSchema = z.object({
     tradeLicense: z.string().optional(),
     resellerDiscount: z.number().optional(),
     status: z.enum(["active", "inactive", "blocked"]).optional(),
+    avatar: z.string().optional(),
   }),
 });

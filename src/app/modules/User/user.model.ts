@@ -20,6 +20,7 @@ const userSchema: Schema<IUser> = new Schema(
     companyName: { type: String },
     tradeLicense: { type: String },
     resellerDiscount: { type: Number, default: 0 },
+    avatar: { type: String },
   },
   { timestamps: true },
 );

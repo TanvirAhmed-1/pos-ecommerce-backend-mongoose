@@ -35,6 +35,13 @@ const config = {
   backend_url: required(process.env.BACKEND_URL, "BACKEND_URL"),
   frontend_url: required(process.env.FRONTEND_URL, "FRONTEND_URL"),
 
+  // --- Cloudinary Configuration ---
+  cloudinary: {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
+    api_key: process.env.CLOUDINARY_API_KEY || "",
+    api_secret: process.env.CLOUDINARY_API_SECRET || "",
+  },
+
   // --- Super Admin Config ---
   superAdmin: {
     name: required(process.env.SUPER_ADMIN_NAME, "SUPER_ADMIN_NAME"),

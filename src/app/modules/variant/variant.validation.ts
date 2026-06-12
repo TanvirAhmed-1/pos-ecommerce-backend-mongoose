@@ -15,6 +15,7 @@ export const createVariantSchema = z.object({
     stock: z.number().int().nonnegative("Stock cannot be negative"),
     sku: z.string({ message: "SKU is required" }),
     isActive: z.boolean().optional(),
+    images: z.array(z.string().url()).optional(),
   }),
 });
 
@@ -23,6 +24,7 @@ export const updateVariantSchema = z.object({
     price: z.number().positive().optional(),
     stock: z.number().int().nonnegative().optional(),
     isActive: z.boolean().optional(),
+    images: z.array(z.string().url()).optional(),
     attributes: z
       .array(
         z.object({

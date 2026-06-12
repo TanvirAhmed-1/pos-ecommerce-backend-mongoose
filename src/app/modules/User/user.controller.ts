@@ -39,8 +39,8 @@ const getUserProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 // GET ALL USERS
-const getAllUsers = catchAsync(async (_req: Request, res: Response) => {
-  const result = await UserService.getAllUsers();
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllUsers(req.query);
   res.status(status.OK).json({
     success: true,
     message: "Users fetched successfully",
@@ -48,7 +48,7 @@ const getAllUsers = catchAsync(async (_req: Request, res: Response) => {
   });
 });
 
-// UPDATE USER
+// UPDATE USER PROFILE (SELF)
 const updateUser = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
   const result = await UserService.updateUser(userId, req.body);
@@ -65,10 +65,27 @@ const updateUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// UPDATE USER BY ID (ADMIN/SUPERADMIN)
+const updateUserById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await UserService.updateUser(id, req.body);
+  if (!result)
+    return res.status(status.NOT_FOUND).json({
+      success: false,
+      message: "User not found",
+    });
+
+  res.status(status.OK).json({
+    success: true,
+    message: "User updated successfully",
+    data: result,
+  });
+});
+
 // DELETE USER
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user.id;
-  const result = await UserService.deleteUser(userId);
+  const targetId = req.params.id || req.user.id;
+  const result = await UserService.deleteUser(targetId);
   if (!result)
     return res.status(status.NOT_FOUND).json({
       success: false,
@@ -88,5 +105,6 @@ export const UserController = {
   getUserProfile,
   getAllUsers,
   updateUser,
+  updateUserById,
   deleteUser,
 };

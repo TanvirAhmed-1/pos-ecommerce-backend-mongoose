@@ -10,11 +10,6 @@ const seoSchema = new Schema(
     metaKeywords: [{ type: String }],
     ogTitle: { type: String },
     ogDescription: { type: String },
-    ogImage: { type: String },
-    twitterTitle: { type: String },
-    twitterDescription: { type: String },
-    twitterImage: { type: String },
-    canonicalUrl: { type: String },
   },
   { _id: false }
 );
@@ -25,7 +20,6 @@ const productSchema = new Schema<IProduct>(
     slug: { type: String, unique: true, lowercase: true },
 
     shortDescription: { type: String, required: true },
-    fullDescription: { type: String, required: true },
     description: { type: String },
 
     seo: { type: seoSchema },
@@ -40,7 +34,13 @@ const productSchema = new Schema<IProduct>(
 
     basePrice: { type: Number, required: true, min: 0 },
     salePrice: { type: Number, required: true, min: 0 },
-    discountPercentage: { type: Number, default: 0 },
+    resellerPrice: { type: Number, required: true, default: 0, min: 0 },
+    discountType: {
+      type: String,
+      enum: ["flat", "percentage"],
+      default: "flat",
+    },
+    productDiscount: { type: Number, default: 0, min: 0 },
     vat: { type: Number, default: 0 },
 
     hasVariants: { type: Boolean, default: false },
@@ -58,10 +58,6 @@ const productSchema = new Schema<IProduct>(
     
     // New Design Fields
     sku: { type: String },
-    costPrice: { type: Number, default: 0 },
-    regularPrice: { type: Number, default: 0 },
-    resellerPrice: { type: Number, default: 0 },
-    discountPrice: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false },
     isTrending: { type: Boolean, default: false },
     isBestSeller: { type: Boolean, default: false },
@@ -98,14 +94,6 @@ productSchema.virtual("socialMedia").get(function (this: any) {
 productSchema.pre("save", async function (this: IProduct) {
   if (this.isModified("name")) {
     this.slug = slugify(this.name, { lower: true, strict: true });
-  }
-
-  if (this.basePrice && this.salePrice && this.basePrice > this.salePrice) {
-    this.discountPercentage = Math.round(
-      ((this.basePrice - this.salePrice) / this.basePrice) * 100,
-    );
-  } else {
-    this.discountPercentage = 0;
   }
 });
 

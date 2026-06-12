@@ -28,6 +28,7 @@ const variantSchema = new Schema<IVariant>(
       trim: true,
     },
     isActive: { type: Boolean, default: true },
+    images: [{ type: String }],
   },
   { timestamps: true },
 );

@@ -5,6 +5,7 @@ import { CompanyModel } from "../company/company.model";
 import { CategoryModel } from "../category/category.model";
 import { Brand } from "../brand/brand.model";
 import AppError from "../../errors/AppError";
+import { deleteFromCloudinary } from "../../utils/cloudinary";
 
 const createProductIntoDB = async (payload: IProduct) => {
   if (!payload.company) {
@@ -62,9 +63,13 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
     sort,
     page = 1,
     limit = 20,
+    admin,
   } = query;
 
-  let filter: any = { isActive: true };
+  let filter: any = {};
+  if (admin !== "true" && admin !== true) {
+    filter.isActive = true;
+  }
   if (searchTerm) {
     filter.$or = [
       { name: { $regex: searchTerm, $options: "i" } },
@@ -77,6 +82,10 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
   if (category) filter.category = category;
   if (subcategory) filter.subcategory = subcategory;
   if (brand) filter.brand = brand;
+  if (query.visibility) filter.visibility = query.visibility;
+  if (query.isActive !== undefined) {
+    filter.isActive = query.isActive === "true" || query.isActive === true;
+  }
 
   // ৩. প্রাইজ রেঞ্জ ফিল্টার
   if (minPrice || maxPrice) {
@@ -131,6 +140,11 @@ const getSingleProductBySlugFromDB = async (slug: string) => {
 };
 
 const updateProductInDB = async (id: string, payload: Partial<IProduct>) => {
+  const isExist = await ProductModel.findById(id);
+  if (!isExist) {
+    throw new AppError(httpStatus.NOT_FOUND, "Product not found to update");
+  }
+
   // Company validation
   if (payload.company) {
     const companyExists = await CompanyModel.findById(payload.company);
@@ -163,23 +177,62 @@ const updateProductInDB = async (id: string, payload: Partial<IProduct>) => {
     }
   }
 
+  // Handle old thumbnail deletion if changed
+  if (payload.thumbnail && isExist.thumbnail && isExist.thumbnail !== payload.thumbnail) {
+    try {
+      await deleteFromCloudinary(isExist.thumbnail);
+    } catch (error) {
+      console.error("Failed to delete old thumbnail from Cloudinary:", error);
+    }
+  }
+
+  // Handle old images deletion if removed from array
+  if (payload.images && isExist.images && isExist.images.length > 0) {
+    const removedImages = isExist.images.filter((img) => !payload.images!.includes(img));
+    for (const imgUrl of removedImages) {
+      try {
+        await deleteFromCloudinary(imgUrl);
+      } catch (error) {
+        console.error("Failed to delete removed product image from Cloudinary:", error);
+      }
+    }
+  }
+
   const result = await ProductModel.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
   });
 
-  if (!result) {
-    throw new AppError(httpStatus.NOT_FOUND, "Product not found to update");
-  }
   return result;
 };
 
 const deleteProductFromDB = async (id: string) => {
-  const result = await ProductModel.findByIdAndDelete(id);
-
-  if (!result) {
+  const isExist = await ProductModel.findById(id);
+  if (!isExist) {
     throw new AppError(httpStatus.NOT_FOUND, "Product not found to delete");
   }
+
+  // Delete thumbnail from Cloudinary
+  if (isExist.thumbnail) {
+    try {
+      await deleteFromCloudinary(isExist.thumbnail);
+    } catch (error) {
+      console.error("Failed to delete product thumbnail from Cloudinary:", error);
+    }
+  }
+
+  // Delete all images from Cloudinary
+  if (isExist.images && isExist.images.length > 0) {
+    for (const imgUrl of isExist.images) {
+      try {
+        await deleteFromCloudinary(imgUrl);
+      } catch (error) {
+        console.error("Failed to delete product image from Cloudinary:", error);
+      }
+    }
+  }
+
+  const result = await ProductModel.findByIdAndDelete(id);
   return result;
 };
 

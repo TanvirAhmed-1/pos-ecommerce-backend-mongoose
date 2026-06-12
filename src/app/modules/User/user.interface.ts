@@ -12,6 +12,7 @@ export type IUser = {
   tradeLicense?: string;
   resellerDiscount?: number;
   status?: UserStatus;
+  avatar?: string;
 };
 
 

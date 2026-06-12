@@ -4,7 +4,6 @@ export interface IProduct extends Document {
   name: string;
   slug: string;
   shortDescription: string;
-  fullDescription: string;
   description?: string;
   seo?: {
     metaTitle?: string;
@@ -12,11 +11,6 @@ export interface IProduct extends Document {
     metaKeywords?: string[];
     ogTitle?: string;
     ogDescription?: string;
-    ogImage?: string;
-    twitterTitle?: string;
-    twitterDescription?: string;
-    twitterImage?: string;
-    canonicalUrl?: string;
   };
   company?: Types.ObjectId;
   category: Types.ObjectId;
@@ -26,7 +20,9 @@ export interface IProduct extends Document {
   images: string[];
   basePrice: number;
   salePrice: number;
-  discountPercentage: number;
+  resellerPrice: number;
+  discountType: "flat" | "percentage";
+  productDiscount: number;
   vat: number;
   hasVariants: boolean;
   totalStock: number;
@@ -36,10 +32,6 @@ export interface IProduct extends Document {
   isActive: boolean;
   // New Design Fields
   sku?: string;
-  costPrice?: number;
-  regularPrice?: number;
-  resellerPrice?: number;
-  discountPrice?: number;
   isFeatured?: boolean;
   isTrending?: boolean;
   isBestSeller?: boolean;

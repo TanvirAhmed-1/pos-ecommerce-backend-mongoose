@@ -3,6 +3,7 @@ import { IUser } from "./user.interface";
 import { UserModel } from "./user.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { deleteFromCloudinary } from "../../utils/cloudinary";
 
 const createUserBD = async (data: IUser) => {
   const saltRounds = config.bcrypt.saltRounds || 10;
@@ -39,6 +40,9 @@ const loginUserBD = async (email: string, password: string) => {
 };
 
 const updateUser = async (id: string, data: Partial<IUser>) => {
+  const isExist = await UserModel.findById(id);
+  if (!isExist) throw new Error("User not found to update");
+
   if (data.password) {
     data.password = await bcrypt.hash(
       data.password,
@@ -46,12 +50,20 @@ const updateUser = async (id: string, data: Partial<IUser>) => {
     );
   }
 
+  // Delete old avatar from Cloudinary if changed
+  if (data.avatar && isExist.avatar && isExist.avatar !== data.avatar) {
+    try {
+      await deleteFromCloudinary(isExist.avatar);
+    } catch (error) {
+      console.error("Failed to delete old avatar from Cloudinary:", error);
+    }
+  }
+
   const result = await UserModel.findByIdAndUpdate(id, data, {
     returnDocument: 'after',
     runValidators: true,
   });
 
-  if (!result) throw new Error("User not found to update");
   return result;
 };
 
@@ -70,13 +82,53 @@ const deleteUser = async (id: string) => {
     throw new Error("User not found");
   }
 
+  // Delete avatar from Cloudinary
+  if (existingUser.avatar) {
+    try {
+      await deleteFromCloudinary(existingUser.avatar);
+    } catch (error) {
+      console.error("Failed to delete user avatar from Cloudinary:", error);
+    }
+  }
+
   const result = await UserModel.findByIdAndDelete(id);
   return result;
 };
 
-const getAllUsers = async () => {
-  const users = await UserModel.find();
-  return users;
+const getAllUsers = async (query: Record<string, any> = {}) => {
+  const { searchTerm, page = 1, limit = 10 } = query;
+  
+  let filter: any = {};
+  if (searchTerm) {
+    const searchRegex = new RegExp(searchTerm, "i");
+    filter.$or = [
+      { name: searchRegex },
+      { email: searchRegex },
+      { phone: searchRegex },
+    ];
+  }
+
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const total = await UserModel.countDocuments(filter);
+  const data = await UserModel.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limitNumber);
+
+  const totalPage = Math.ceil(total / limitNumber);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage,
+    },
+    data,
+  };
 };
 
 export const UserService = {

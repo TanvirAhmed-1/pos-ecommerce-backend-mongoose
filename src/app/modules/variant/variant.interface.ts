@@ -12,4 +12,5 @@ export interface IVariant {
   stock: number;
   sku: string;
   isActive: boolean;
+  images?: string[];
 }
