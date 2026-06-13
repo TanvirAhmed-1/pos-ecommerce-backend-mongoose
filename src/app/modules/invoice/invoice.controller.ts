@@ -73,13 +73,21 @@ const getMyInvoices = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllInvoices = catchAsync(async (_req: Request, res: Response) => {
-  const invoices = await InvoiceService.getAllInvoices();
+const getAllInvoices = catchAsync(async (req: Request, res: Response) => {
+  const { page, limit, paymentStatus, paymentMethod, search } = req.query;
+  const result = await InvoiceService.getAllInvoices({
+    page: page ? Number(page) : 1,
+    limit: limit ? Number(limit) : 20,
+    paymentStatus: paymentStatus as string,
+    paymentMethod: paymentMethod as string,
+    search: search as string,
+  });
 
   res.status(httpStatus.OK).json({
     success: true,
     message: "All invoices retrieved successfully",
-    data: invoices,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

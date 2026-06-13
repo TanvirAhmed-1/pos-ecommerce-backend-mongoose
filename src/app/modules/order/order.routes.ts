@@ -29,4 +29,10 @@ router.get(
   OrderController.getAllOrders,
 );
 
+router.delete(
+  "/delete-order/:id",
+  auth("admin", "superadmin"),
+  OrderController.deleteOrder,
+);
+
 export const OrderRoutes = router;

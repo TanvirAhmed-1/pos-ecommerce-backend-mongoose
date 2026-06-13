@@ -3,6 +3,7 @@ import { CartModel } from "../cart/cart.model";
 import { OrderModel } from "./order.model";
 import { VariantModel } from "../variant/variant.model";
 import { InvoiceService } from "../invoice/invoice.services";
+import { UserModel } from "../user/user.model";
 
 const createOrderIntoDB = async (userId: string, payload: any) => {
   const session = await mongoose.startSession();
@@ -73,7 +74,7 @@ const getSingleOrderFromDB = async (orderId: string, userId: string) => {
     .populate("items.variant");
 };
 
-const updateOrderStatusInDB = async (orderId: string, status: string) => {
+const updateOrderStatusInDB = async (orderId: string, status?: string, paymentStatus?: string) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -84,7 +85,7 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
     }
 
     // যদি অর্ডার অলরেডি ডেলিভারড হয়ে যায়, তবে আর ক্যানসেল করা যাবে না
-    if (order.orderStatus === "delivered" && status === "cancelled") {
+    if (status === "cancelled" && order.orderStatus === "delivered") {
       throw new Error("Delivered order cannot be cancelled!");
     }
 
@@ -99,15 +100,25 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
       }
     }
 
+    const updateData: any = {};
+    if (status) {
+      updateData.orderStatus = status;
+    }
+    if (paymentStatus) {
+      updateData["payment.status"] = paymentStatus;
+    }
+
     // স্ট্যাটাস আপডেট
     const result = await OrderModel.findByIdAndUpdate(
       orderId,
-      { orderStatus: status },
+      updateData,
       { new: true, session },
     );
 
-    if (status === "cancelled") {
+    if (status === "cancelled" || paymentStatus === "cancelled") {
       await InvoiceService.updateInvoicePaymentStatus(orderId, "cancelled");
+    } else if (paymentStatus === "paid") {
+      await InvoiceService.updateInvoicePaymentStatus(orderId, "paid");
     }
 
     await session.commitTransaction();
@@ -120,12 +131,101 @@ const updateOrderStatusInDB = async (orderId: string, status: string) => {
   }
 };
 
-const getAllOrdersFromDB = async () => {
-  return await OrderModel.find()
+const getAllOrdersFromDB = async (query: Record<string, any>) => {
+  const { page = 1, limit = 20, searchTerm, status } = query;
+
+  let filter: any = {};
+
+  if (status && status !== "All") {
+    filter.orderStatus = status.toLowerCase();
+  }
+
+  if (searchTerm) {
+    const matchingUsers = await UserModel.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: "i" } },
+        { email: { $regex: searchTerm, $options: "i" } },
+        { phone: { $regex: searchTerm, $options: "i" } },
+      ],
+    }).select("_id");
+
+    const userIds = matchingUsers.map((u) => u._id);
+
+    filter.$or = [
+      { user: { $in: userIds } },
+      { "shippingAddress.fullName": { $regex: searchTerm, $options: "i" } },
+      { "shippingAddress.phone": { $regex: searchTerm, $options: "i" } },
+      { "shippingAddress.address": { $regex: searchTerm, $options: "i" } },
+      { "shippingAddress.city": { $regex: searchTerm, $options: "i" } },
+    ];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const orderQuery = OrderModel.find(filter)
     .populate("user", "name email phone")
     .populate("items.product", "name thumbnail slug")
     .populate("items.variant")
-    .sort("-createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(Number(limit));
+
+  const result = await orderQuery;
+  const total = await OrderModel.countDocuments(filter);
+
+  // Global order statistics aggregation
+  const allStats = await OrderModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalOrders: { $sum: 1 },
+        pendingOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "pending"] }, 1, 0] }
+        },
+        processingOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "processing"] }, 1, 0] }
+        },
+        totalSales: {
+          $sum: {
+            $cond: [
+              { $or: [
+                { $eq: ["$orderStatus", "delivered"] },
+                { $eq: ["$payment.status", "paid"] }
+              ]},
+              "$totalAmount",
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const stats = allStats[0] || {
+    totalOrders: 0,
+    pendingOrders: 0,
+    processingOrders: 0,
+    totalSales: 0
+  };
+
+  return {
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPage: Math.ceil(total / Number(limit)),
+      stats
+    },
+    data: result,
+  };
+};
+
+const deleteOrderFromDB = async (orderId: string) => {
+  const result = await OrderModel.findByIdAndDelete(orderId);
+  if (!result) {
+    throw new Error("Order not found!");
+  }
+  return result;
 };
 
 export const OrderService = {
@@ -134,4 +234,5 @@ export const OrderService = {
   getSingleOrderFromDB,
   updateOrderStatusInDB,
   getAllOrdersFromDB,
+  deleteOrderFromDB,
 };

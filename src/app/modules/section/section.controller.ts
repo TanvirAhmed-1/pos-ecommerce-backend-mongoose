@@ -12,8 +12,9 @@ const createSection = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getHomeSections = catchAsync(async (_req: Request, res: Response) => {
-  const result = await SectionService.getHomeSectionsFromDB();
+const getHomeSections = catchAsync(async (req: Request, res: Response) => {
+  const adminMode = req.query.admin === "true";
+  const result = await SectionService.getHomeSectionsFromDB(adminMode);
   res.status(httpStatus.OK).json({
     success: true,
     message: "Sections fetched successfully",

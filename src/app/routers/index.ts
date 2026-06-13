@@ -17,6 +17,8 @@ import { FooterRoutes } from "../modules/footer/footer.route";
 import { AddressRoutes } from "../modules/address/address.route";
 import { InvoiceRoutes } from "../modules/invoice/invoice.route";
 import { UploadRoutes } from "../modules/upload/upload.route";
+import { DashboardRoutes } from "../modules/dashboard/dashboard.route";
+import { MailRoutes } from "../modules/mail/mail.route";
 
 const routet = Router();
 const allRouters = [
@@ -38,6 +40,8 @@ const allRouters = [
   AddressRoutes,
   InvoiceRoutes,
   UploadRoutes,
+  DashboardRoutes,
+  MailRoutes,
 ];
 
 allRouters.forEach((router) => {

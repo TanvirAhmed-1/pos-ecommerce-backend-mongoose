@@ -8,25 +8,25 @@ const router = Router();
 
 router.get("/sliders", SliderController.getHomeSliders);
 
-router.get("/all-sliders", auth("admin"), SliderController.getAllSliders);
+router.get("/all-sliders", auth("admin", "superadmin"), SliderController.getAllSliders);
 
 router.post(
   "/create-slider",
-  auth("admin"),
+  auth("admin", "superadmin"),
   validateData(SliderValidation.createSliderSchema),
   SliderController.createSlider,
 );
 
 router.patch(
   "/update-sliders/:id",
-  auth("admin"),
+  auth("admin", "superadmin"),
   validateData(SliderValidation.updateSliderSchema),
   SliderController.updateSlider,
 );
 
 router.delete(
   "/delete-slider/:id",
-  auth("admin"),
+  auth("admin", "superadmin"),
   SliderController.deleteSlider,
 );
 

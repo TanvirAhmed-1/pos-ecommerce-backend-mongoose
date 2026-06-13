@@ -14,13 +14,16 @@ const createSectionIntoDB = async (payload: ISection) => {
 };
 
 // হোমপেজের জন্য সব সেকশন একসাথে আনা (পপুলেটসহ)
-const getHomeSectionsFromDB = async () => {
-  return await SectionModel.find({ isActive: true })
+const getHomeSectionsFromDB = async (adminMode = false) => {
+  const query = adminMode ? {} : { isActive: true };
+  const matchObj = adminMode ? {} : { isActive: true };
+
+  return await SectionModel.find(query)
     .sort({ displayOrder: 1 }) // ছোট থেকে বড় সাজাবে
     .populate({
       path: "products",
-      match: { isActive: true }, // শুধু এনাবল প্রোডাক্টগুলো দেখাবে
-      select: "name price thumbnail slug discountPrice", // শুধু দরকারি ডাটা
+      match: matchObj, // শুধু এনাবল প্রোডাক্টগুলো দেখাবে (হোমপেজে)
+      select: "name basePrice salePrice thumbnail slug productDiscount discountType", // শুধু দরকারি ডাটা
     });
 };
 
