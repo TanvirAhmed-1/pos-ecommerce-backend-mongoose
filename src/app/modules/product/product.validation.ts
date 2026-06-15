@@ -89,6 +89,7 @@ const createProductSchema = z.object({
     isTrending: z.boolean().default(false).optional(),
     isBestSeller: z.boolean().default(false).optional(),
     isNewArrival: z.boolean().default(false).optional(),
+    variants: z.array(z.any()).optional(),
   }),
 });
 
@@ -127,6 +128,7 @@ const updateProductSchema = z.object({
     isTrending: z.boolean().optional(),
     isBestSeller: z.boolean().optional(),
     isNewArrival: z.boolean().optional(),
+    variants: z.array(z.any()).optional(),
   }),
 });
 

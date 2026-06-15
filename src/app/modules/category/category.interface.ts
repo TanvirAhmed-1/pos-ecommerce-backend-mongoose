@@ -7,5 +7,6 @@ export interface ICategory {
   parentCategory?: Types.ObjectId;
   ancestors: Types.ObjectId[];
   isActive: boolean;
-  isFeatured: boolean;
+  showInFooter: boolean;
+  showInNavbar: boolean;
 }

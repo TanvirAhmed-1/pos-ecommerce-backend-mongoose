@@ -16,7 +16,8 @@ const categorySchema = new Schema<ICategory>(
       ref: 'Category' 
     }],
     isActive: { type: Boolean, default: true },
-    isFeatured: { type: Boolean, default: false },
+    showInFooter: { type: Boolean, default: false },
+    showInNavbar: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

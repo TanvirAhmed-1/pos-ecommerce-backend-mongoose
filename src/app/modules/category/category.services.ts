@@ -27,16 +27,49 @@ const createCategoryIntoDB = async (payload: ICategory) => {
   return result;
 };
 
-// নেভিগেশনের জন্য শুধু Main Categories (Level 0)
 const getNavCategories = async () => {
-  return await CategoryModel.find({ level: 0, isActive: true })
-    .select("name slug")
-    .lean();
+  const allActiveCategories = await CategoryModel.find({ isActive: true }).lean();
+
+  const categoryMap: Record<string, any> = {};
+  allActiveCategories.forEach((cat) => {
+    categoryMap[cat._id.toString()] = {
+      _id: cat._id,
+      name: cat.name,
+      slug: cat.slug,
+      level: cat.level,
+      parentCategory: cat.parentCategory,
+      children: [],
+    };
+  });
+
+  const tree: any[] = [];
+
+  allActiveCategories.forEach((cat) => {
+    const currentCat = categoryMap[cat._id.toString()];
+
+    if (cat.parentCategory) {
+      const parentId = cat.parentCategory.toString();
+
+      if (categoryMap[parentId]) {
+        const { parentCategory, ...childData } = currentCat;
+        categoryMap[parentId].children.push(childData);
+      }
+    } else {
+      // Root/Main category (level === 0 or no parentCategory)
+      if (cat.showInNavbar) {
+        const { parentCategory, ...rootData } = currentCat;
+        tree.push(rootData);
+      }
+    }
+  });
+
+  return tree;
 };
 
 // হোমপেজে Featured সেকশনের জন্য
-const getFeaturedCategories = async () => {
-  return await CategoryModel.find({ isFeatured: true, isActive: true })
+// ফুটারে দেখানোর জন্য
+const getFooterCategories = async () => {
+  return await CategoryModel.find({ showInFooter: true, isActive: true })
     .select("name slug")
     .lean();
 };
@@ -131,7 +164,7 @@ const deleteCategoryFromDB = async (id: string) => {
 export const CategoryService = {
   createCategoryIntoDB,
   getNavCategories,
-  getFeaturedCategories,
+  getFooterCategories,
   getAllCategories,
   deleteCategoryFromDB,
   updateCategoryInDB,

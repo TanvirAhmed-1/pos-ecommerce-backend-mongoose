@@ -32,7 +32,7 @@ const getMyWishlist = catchAsync(async (req: Request, res: Response) => {
 const removeProductFromWishlist = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req.user.id;
-    const { productId } = req.body;
+    const productId = req.params.productId || req.body.productId;
     await WishlistService.removeProductFromWishlistDB(userId, productId);
 
     res.status(httpStatus.OK).json({

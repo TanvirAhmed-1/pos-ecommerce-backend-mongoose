@@ -65,7 +65,7 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
 const getMyOrdersFromDB = async (userId: string) => {
   return await OrderModel.find({ user: userId })
     .populate("items.product", "name thumbnail slug")
-    .sort("-createdAt"); // নতুন অর্ডার আগে দেখাবে
+    .sort("-createdAt"); 
 };
 
 const getSingleOrderFromDB = async (orderId: string, userId: string) => {

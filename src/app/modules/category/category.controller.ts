@@ -21,12 +21,12 @@ const getNavCategories = catchAsync(async (_req: Request, res: Response) => {
   });
 });
 
-const getFeaturedCategories = catchAsync(
+const getFooterCategories = catchAsync(
   async (_req: Request, res: Response) => {
-    const result = await CategoryService.getFeaturedCategories();
+    const result = await CategoryService.getFooterCategories();
     res.status(status.OK).json({
       success: true,
-      message: "Featured categories fetched successfully",
+      message: "Footer categories fetched successfully",
       data: result,
     });
   },
@@ -63,7 +63,7 @@ const updateCategory = catchAsync(async (req: Request, res: Response) => {
 export const CategoryController = {
   createCategory,
   getNavCategories,
-  getFeaturedCategories,
+  getFooterCategories,
   getAllCategories,
   deleteCategory,
   updateCategory,

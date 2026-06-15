@@ -26,11 +26,11 @@ const createVariantIntoDB = async (payload: IVariant) => {
       );
     }
 
+    // Auto-add custom value to attribute's values list if not already present
     if (!attributeExists.values.includes(attr.value)) {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        `Value "${attr.value}" is not valid for ${attributeExists.name}`,
-      );
+      await AttributeModel.findByIdAndUpdate(attr.attribute, {
+        $addToSet: { values: attr.value },
+      });
     }
   }
 

@@ -11,7 +11,7 @@ const app: Application = express();
 // Middlewares
 app.use(
   cors({
-    origin: [config.frontend_url],
+    origin: [config.frontend_url, "http://localhost:3001", "http://localhost:3000"],
     credentials: true,
   })
 );

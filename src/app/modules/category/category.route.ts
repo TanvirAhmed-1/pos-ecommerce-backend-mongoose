@@ -17,7 +17,7 @@ router.get("/all-categories", CategoryController.getAllCategories);
 
 // Public Routes (For Homepage & Nav)
 router.get("/nav-categories", CategoryController.getNavCategories);
-router.get("/featured-categories", CategoryController.getFeaturedCategories);
+router.get("/footer-categories", CategoryController.getFooterCategories);
 
 router.put(
   "/update-category/:id",
