@@ -8,5 +8,8 @@ export const createCategoryZodSchema = z.object({
     showInFooter: z.boolean().optional(),
     showInNavbar: z.boolean().optional(),
     slug: z.string().optional(),
+    title: z.string().optional(),
+    image: z.string().optional(),
+    isFeatured: z.boolean().optional(),
   }),
 });

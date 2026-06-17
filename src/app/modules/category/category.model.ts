@@ -6,6 +6,8 @@ const categorySchema = new Schema<ICategory>(
     name: { type: String, required: true, unique: true, trim: true },
     slug: { type: String, unique: true, lowercase: true },
     level: { type: Number, default: 0 },
+    title: { type: String, trim: true },
+    image: { type: String, trim: true },
     parentCategory: { 
       type: Schema.Types.ObjectId, 
       ref: 'Category', 
@@ -18,6 +20,7 @@ const categorySchema = new Schema<ICategory>(
     isActive: { type: Boolean, default: true },
     showInFooter: { type: Boolean, default: false },
     showInNavbar: { type: Boolean, default: false },
+    isFeatured: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

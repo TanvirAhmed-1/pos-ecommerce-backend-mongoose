@@ -11,8 +11,26 @@ const addToCartIntoDB = async (
   const productData = await ProductModel.findById(product);
   if (!productData) throw new Error("Product not found!");
 
-  const variantData = await VariantModel.findById(variant);
-  if (!variantData) throw new Error("Variant not found!");
+  let variantData = await VariantModel.findById(variant);
+  if (!variantData) {
+    if (variant === product && !productData.hasVariants) {
+      variantData = await VariantModel.findOne({ product: productData._id });
+      if (!variantData) {
+        variantData = await VariantModel.create({
+          product: productData._id,
+          attributes: [],
+          price: productData.salePrice || productData.basePrice,
+          stock: productData.totalStock || 0,
+          sku: productData.sku || `${productData.slug.toUpperCase()}-DEF`,
+          isActive: true,
+          images: [productData.thumbnail],
+        });
+      }
+    } else {
+      throw new Error("Variant not found!");
+    }
+  }
+
   if (variantData.stock < quantity) throw new Error("Insufficient stock!");
 
   // ব্যাকএন্ড থেকে প্রাইস নির্ধারণ

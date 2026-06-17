@@ -88,6 +88,17 @@ const createProductIntoDB = async (payload: any) => {
     ]);
     const totalStock = totalStockData.length > 0 ? totalStockData[0].total : 0;
     await ProductModel.findByIdAndUpdate(result._id, { totalStock });
+  } else if (result) {
+    // If hasVariants is false, auto-create a default variant document
+    await VariantModel.create({
+      product: result._id,
+      attributes: [],
+      price: result.salePrice || result.basePrice,
+      stock: result.totalStock || 0,
+      sku: result.sku || `${result.slug.toUpperCase()}-DEF`,
+      isActive: true,
+      images: [result.thumbnail],
+    });
   }
 
   return result;
@@ -227,7 +238,35 @@ const getSingleProductBySlugFromDB = async (slug: string) => {
   if (!result) {
     throw new AppError(httpStatus.NOT_FOUND, "Product not found!");
   }
-  return result;
+
+  const productObj = result.toObject();
+
+  if (productObj.hasVariants && productObj.productVariants) {
+    const attributeMap: Record<string, Set<string>> = {};
+    productObj.productVariants.forEach((variant: any) => {
+      if (!variant.isActive) return;
+      variant.attributes?.forEach((attrEntry: any) => {
+        const name = attrEntry.attribute?.name || "Option";
+        if (name && attrEntry.value) {
+          if (!attributeMap[name]) {
+            attributeMap[name] = new Set<string>();
+          }
+          attributeMap[name].add(attrEntry.value);
+        }
+      });
+    });
+
+    const uniqueAttributes = Object.keys(attributeMap).map(name => ({
+      name,
+      values: Array.from(attributeMap[name])
+    }));
+
+    productObj.variantAttributes = uniqueAttributes;
+  } else {
+    productObj.variantAttributes = [];
+  }
+
+  return productObj;
 };
 
 const updateProductInDB = async (id: string, payload: any) => {
@@ -335,8 +374,20 @@ const updateProductInDB = async (id: string, payload: any) => {
       const totalStock = totalStockData.length > 0 ? totalStockData[0].total : 0;
       await ProductModel.findByIdAndUpdate(id, { totalStock });
     } else if (!productData.hasVariants) {
-      // If hasVariants is turned off, delete all variants
+      // If hasVariants is turned off, delete all variants and create a single default variant
       await VariantModel.deleteMany({ product: id });
+      const updatedProduct = await ProductModel.findById(id);
+      if (updatedProduct) {
+        await VariantModel.create({
+          product: id,
+          attributes: [],
+          price: updatedProduct.salePrice || updatedProduct.basePrice,
+          stock: updatedProduct.totalStock || 0,
+          sku: updatedProduct.sku || `${updatedProduct.slug.toUpperCase()}-DEF`,
+          isActive: true,
+          images: [updatedProduct.thumbnail],
+        });
+      }
     }
   }
 

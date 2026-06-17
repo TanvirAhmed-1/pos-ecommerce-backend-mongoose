@@ -37,6 +37,9 @@ const getNavCategories = async () => {
       name: cat.name,
       slug: cat.slug,
       level: cat.level,
+      title: cat.title,
+      image: cat.image,
+      isFeatured: cat.isFeatured,
       parentCategory: cat.parentCategory,
       children: [],
     };
