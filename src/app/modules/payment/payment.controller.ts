@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import httpStatus from "http-status";
 import catchAsync from "../../utils/catchAsync";
 import config from "../../config";
 import { PaymentServices } from "./payment.services";
@@ -26,4 +27,53 @@ const bkashCallback = catchAsync(async (req: Request, res: Response) => {
   }
 });
 
-export const PaymentControllers = { bkashCallback };
+const getAllPayments = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentServices.getAllPaymentsFromDB(req.query);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: "All payments retrieved successfully",
+    data: result,
+  });
+});
+
+const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await PaymentServices.getSinglePaymentFromDB(id);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: "Payment retrieved successfully",
+    data: result,
+  });
+});
+
+const updatePaymentStatus = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await PaymentServices.updatePaymentStatusInDB(id, req.body);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: "Payment updated successfully",
+    data: result,
+  });
+});
+
+const deletePayment = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await PaymentServices.deletePaymentFromDB(id);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: "Payment deleted successfully",
+    data: result,
+  });
+});
+
+export const PaymentControllers = { 
+  bkashCallback,
+  getAllPayments,
+  getSinglePayment,
+  updatePaymentStatus,
+  deletePayment
+};

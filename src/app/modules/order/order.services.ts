@@ -163,7 +163,7 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   const orderQuery = OrderModel.find(filter)
-    .populate("user", "name email phone")
+    .populate("user", "name email phone role")
     .populate("items.product", "name thumbnail slug")
     .populate("items.variant")
     .sort("-createdAt")

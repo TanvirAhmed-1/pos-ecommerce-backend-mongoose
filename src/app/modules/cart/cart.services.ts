@@ -1,6 +1,7 @@
 import { CartModel } from "./cart.model";
 import { VariantModel } from "../variant/variant.model";
 import { ProductModel } from "../product/product.model";
+import { UserModel } from "../user/user.model";
 
 const addToCartIntoDB = async (
   userId: string,
@@ -34,10 +35,27 @@ const addToCartIntoDB = async (
   if (variantData.stock < quantity) throw new Error("Insufficient stock!");
 
   // ব্যাকএন্ড থেকে প্রাইস নির্ধারণ
-  const price =
+  let price =
     (variantData as any).salePrice ||
     (variantData as any).basePrice ||
     (variantData as any).price;
+
+  // চেক করা হচ্ছে ইউজার রিসেলার কিনা
+  const user = await UserModel.findById(userId);
+  const isReseller = user?.role?.toLowerCase() === "reseller";
+
+  if (isReseller && productData.resellerPrice && productData.resellerPrice > 0) {
+    if (productData.hasVariants && variantData && variantData.price) {
+      if (productData.salePrice && productData.resellerPrice) {
+        const ratio = productData.resellerPrice / productData.salePrice;
+        price = Math.round(variantData.price * ratio);
+      } else {
+        price = productData.resellerPrice;
+      }
+    } else {
+      price = productData.resellerPrice;
+    }
+  }
 
   if (!price) throw new Error("Product price is not defined in the variant!");
 

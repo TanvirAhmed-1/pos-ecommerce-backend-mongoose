@@ -5,6 +5,7 @@ import { CartModel } from "../cart/cart.model";
 import { PaymentModel } from "./payment.model";
 import { VariantModel } from "../variant/variant.model";
 import { InvoiceService } from "../invoice/invoice.services";
+import { UserModel } from "../user/user.model";
 
 const getBkashHeaders = async () => {
   try {
@@ -94,4 +95,134 @@ const executeBkashPayment = async (paymentID: string, userId: string) => {
   throw new Error(executeData.statusMessage);
 };
 
-export const PaymentServices = { initBkashPayment, executeBkashPayment };
+const getAllPaymentsFromDB = async (query: Record<string, any>) => {
+  const { page = 1, limit = 20, searchTerm, status, gateway } = query;
+
+  let filter: any = {};
+
+  if (status && status !== "All") {
+    filter.status = status.toUpperCase();
+  }
+
+  if (gateway && gateway !== "All") {
+    filter.paymentGateway = gateway.toUpperCase();
+  }
+
+  if (searchTerm) {
+    const matchingUsers = await UserModel.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: "i" } },
+        { email: { $regex: searchTerm, $options: "i" } },
+        { phone: { $regex: searchTerm, $options: "i" } },
+      ],
+    }).select("_id");
+
+    const userIds = matchingUsers.map((u) => u._id);
+
+    filter.$or = [
+      { transactionId: { $regex: searchTerm, $options: "i" } },
+      { gatewayTrxId: { $regex: searchTerm, $options: "i" } },
+      { user: { $in: userIds } },
+    ];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const paymentQuery = PaymentModel.find(filter)
+    .populate("user", "name email phone")
+    .populate({
+      path: "order",
+      select: "orderStatus totalAmount payment deliveryType createdAt",
+    })
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(Number(limit));
+
+  const result = await paymentQuery;
+  const total = await PaymentModel.countDocuments(filter);
+
+  // Statistics
+  const allStats = await PaymentModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalPayments: { $sum: 1 },
+        successfulPayments: {
+          $sum: { $cond: [{ $eq: ["$status", "SUCCESS"] }, 1, 0] }
+        },
+        pendingPayments: {
+          $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] }
+        },
+        totalAmountCollected: {
+          $sum: {
+            $cond: [
+              { $eq: ["$status", "SUCCESS"] },
+              "$amount",
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const stats = allStats[0] || {
+    totalPayments: 0,
+    successfulPayments: 0,
+    pendingPayments: 0,
+    totalAmountCollected: 0
+  };
+
+  return {
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPage: Math.ceil(total / Number(limit)),
+      stats
+    },
+    data: result,
+  };
+};
+
+const getSinglePaymentFromDB = async (paymentId: string) => {
+  return await PaymentModel.findById(paymentId)
+    .populate("user", "name email phone")
+    .populate({
+      path: "order",
+      populate: [
+        { path: "items.product", select: "name thumbnail" },
+        { path: "items.variant", select: "name color size price" }
+      ]
+    });
+};
+
+const updatePaymentStatusInDB = async (paymentId: string, payload: Partial<any>) => {
+  const result = await PaymentModel.findByIdAndUpdate(
+    paymentId,
+    payload,
+    { new: true }
+  ).populate("user", "name email phone");
+  
+  if (!result) {
+    throw new Error("Payment record not found!");
+  }
+  return result;
+};
+
+const deletePaymentFromDB = async (paymentId: string) => {
+  const result = await PaymentModel.findByIdAndDelete(paymentId);
+  if (!result) {
+    throw new Error("Payment record not found!");
+  }
+  return result;
+};
+
+export const PaymentServices = { 
+  initBkashPayment, 
+  executeBkashPayment, 
+  getAllPaymentsFromDB, 
+  getSinglePaymentFromDB, 
+  updatePaymentStatusInDB, 
+  deletePaymentFromDB 
+};

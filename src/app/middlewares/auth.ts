@@ -39,6 +39,8 @@ import { NextFunction, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../config";
 import catchAsync from "../utils/catchAsync";
+import AppError from "../errors/AppError";
+import httpStatus from "http-status";
 
 const auth = (...requiredRoles: string[]) => {
   return catchAsync(async (req: Request, _res: Response, next: NextFunction) => {
@@ -46,20 +48,25 @@ const auth = (...requiredRoles: string[]) => {
 
     // ১. টোকেন চেক
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new Error("You are not authorized! Token is missing.");
+      throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized! Token is missing.");
     }
 
     const token = authHeader.split(" ")[1];
 
     // ২. ভেরিফাই টোকেন
-    const decoded = jwt.verify(
-      token,
-      config.jwtSecret as string
-    ) as JwtPayload;
+    let decoded;
+    try {
+      decoded = jwt.verify(
+        token,
+        config.jwtSecret as string
+      ) as JwtPayload;
+    } catch (err: any) {
+      throw new AppError(httpStatus.UNAUTHORIZED, err.message || "Unauthorized");
+    }
 
     // ৩. রোল চেক
     if (requiredRoles.length && !requiredRoles.includes(decoded.role)) {
-      throw new Error("You do not have permission to access this route");
+      throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to access this route");
     }
 
     // ৪. রিকোয়েস্টে ইউজার সেট করা
