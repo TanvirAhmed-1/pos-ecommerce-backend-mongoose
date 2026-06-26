@@ -20,6 +20,7 @@ const createPageZodSchema = z.object({
     content: z.string({ message: "HTML content is required" }),
     group: z.string().default("Quick Links"),
     isActive: z.boolean().default(true),
+    showNavbar: z.boolean().default(false).optional(),
     seo: seoValidationSchema,
   }),
 });
@@ -31,6 +32,7 @@ const updatePageZodSchema = z.object({
     content: z.string().optional(),
     group: z.string().optional(),
     isActive: z.boolean().optional(),
+    showNavbar: z.boolean().optional(),
     seo: seoValidationSchema.partial().optional(),
   }),
 });

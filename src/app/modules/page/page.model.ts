@@ -24,6 +24,7 @@ const pageSchema = new Schema<IPage>(
     content: { type: String, required: true },
     group: { type: String, required: true, default: "Quick Links" },
     isActive: { type: Boolean, default: true },
+    showNavbar: { type: Boolean, default: false },
     seo: { type: seoSchema },
   },
   { timestamps: true }

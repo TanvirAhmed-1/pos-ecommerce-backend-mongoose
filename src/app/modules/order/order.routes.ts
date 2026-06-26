@@ -5,7 +5,6 @@ import validateData from "../../middlewares/validateData";
 import { OrderValidation } from "./order.validation";
 
 const router = Router();
-router.use(auth());
 router.get("/my-orders", auth("customer", "reseller"), OrderController.getMyOrders);
 
 router.get("/order/:id", auth("customer", "reseller"), OrderController.getSingleOrder);

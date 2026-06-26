@@ -5,7 +5,7 @@ import auth from "../../middlewares/auth";
 const router = Router();
 
 // Protect all routes with auth
-router.use(auth());
+
 
 // Generate invoice (triggered after payment, or manually)
 router.post("/invoice/generate", auth("customer", "reseller", "admin", "superadmin"), InvoiceController.generateInvoice);

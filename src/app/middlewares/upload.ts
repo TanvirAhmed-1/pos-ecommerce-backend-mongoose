@@ -160,10 +160,9 @@ export const parseMultipartBody = (req: Request, _res: Response, next: NextFunct
     const booleanFields = [
       "hasVariants",
       "isActive",
-      "isFeatured",
-      "isTrending",
-      "isBestSeller",
-      "isNewArrival",
+      "isRecommended",
+      "isCategoryProduct",
+      "isTopSelling",
     ];
     booleanFields.forEach((field) => {
       if (req.body[field] !== undefined && req.body[field] !== "") {

@@ -31,6 +31,9 @@ const getAllPagesFromDB = async (query: Record<string, any>) => {
   if (query.isActive !== undefined) {
     filter.isActive = query.isActive === 'true' || query.isActive === true;
   }
+  if (query.showNavbar !== undefined) {
+    filter.showNavbar = query.showNavbar === 'true' || query.showNavbar === true;
+  }
   if (query.searchTerm) {
     filter.title = { $regex: query.searchTerm, $options: "i" };
   }

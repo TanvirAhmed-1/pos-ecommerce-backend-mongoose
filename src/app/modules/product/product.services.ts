@@ -1,6 +1,5 @@
 import httpStatus from "http-status";
 import mongoose from "mongoose";
-import { IProduct } from "./product.interface";
 import { ProductModel } from "./product.model";
 import { CompanyModel } from "../company/company.model";
 import { CategoryModel } from "../category/category.model";

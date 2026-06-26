@@ -58,10 +58,9 @@ const productSchema = new Schema<IProduct>(
     
     // New Design Fields
     sku: { type: String },
-    isFeatured: { type: Boolean, default: false },
-    isTrending: { type: Boolean, default: false },
-    isBestSeller: { type: Boolean, default: false },
-    isNewArrival: { type: Boolean, default: false },
+    isRecommended: { type: Boolean, default: false },
+    isCategoryProduct: { type: Boolean, default: false },
+    isTopSelling: { type: Boolean, default: false },
   },
   {
     timestamps: true,

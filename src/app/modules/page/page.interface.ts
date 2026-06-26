@@ -17,5 +17,6 @@ export type IPage = {
   content: string;
   group: string;
   isActive: boolean;
+  showNavbar?: boolean;
   seo?: ISEO;
 };

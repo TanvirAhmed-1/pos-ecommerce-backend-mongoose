@@ -32,11 +32,12 @@ export interface IProduct extends Document {
   isActive: boolean;
   // New Design Fields
   sku?: string;
-  isFeatured?: boolean;
-  isTrending?: boolean;
-  isBestSeller?: boolean;
-  isNewArrival?: boolean;
+  isRecommended?: boolean;
+  isCategoryProduct?: boolean;
+  isTopSelling?: boolean;
   // Custom Properties for Logic
   _isWishlisted?: boolean;
   isWishlisted?: boolean;
+  productVariants?: any[];
+  variantAttributes?: any[];
 }

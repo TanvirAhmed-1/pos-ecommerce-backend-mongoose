@@ -85,10 +85,9 @@ const createProductSchema = z.object({
 
     // New Design Fields
     sku: z.string().optional(),
-    isFeatured: z.boolean().default(false).optional(),
-    isTrending: z.boolean().default(false).optional(),
-    isBestSeller: z.boolean().default(false).optional(),
-    isNewArrival: z.boolean().default(false).optional(),
+    isRecommended: z.boolean().default(false).optional(),
+    isCategoryProduct: z.boolean().default(false).optional(),
+    isTopSelling: z.boolean().default(false).optional(),
     variants: z.array(z.any()).optional(),
   }),
 });
@@ -124,10 +123,9 @@ const updateProductSchema = z.object({
     visibility: z.enum(["published", "hidden", "out_of_stock"]).optional(),
     isActive: z.boolean().optional(),
     sku: z.string().optional(),
-    isFeatured: z.boolean().optional(),
-    isTrending: z.boolean().optional(),
-    isBestSeller: z.boolean().optional(),
-    isNewArrival: z.boolean().optional(),
+    isRecommended: z.boolean().optional(),
+    isCategoryProduct: z.boolean().optional(),
+    isTopSelling: z.boolean().optional(),
     variants: z.array(z.any()).optional(),
   }),
 });
