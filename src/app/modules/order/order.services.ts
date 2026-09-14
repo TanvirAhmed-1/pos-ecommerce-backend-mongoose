@@ -164,8 +164,11 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
 
   const orderQuery = OrderModel.find(filter)
     .populate("user", "name email phone role")
-    .populate("items.product", "name thumbnail slug")
-    .populate("items.variant")
+    .populate("items.product", "name thumbnail slug basePrice salePrice totalStock hasVariants sku productCode barcode")
+    .populate({
+      path: "items.variant",
+      populate: { path: "attributes.attribute", select: "name" },
+    })
     .sort("-createdAt")
     .skip(skip)
     .limit(Number(limit));

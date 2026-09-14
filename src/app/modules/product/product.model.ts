@@ -18,23 +18,20 @@ const productSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, lowercase: true },
-
     shortDescription: { type: String, required: true },
     description: { type: String },
-
     seo: { type: seoSchema },
     company: { type: Schema.Types.ObjectId, ref: "Company", required: true },
-
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
     subcategory: { type: Schema.Types.ObjectId, ref: "Category" },
     brand: { type: Schema.Types.ObjectId, ref: "Brand" },
-
     thumbnail: { type: String, required: true },
     images: [{ type: String }],
-
     basePrice: { type: Number, required: true, min: 0 },
     salePrice: { type: Number, required: true, min: 0 },
     resellerPrice: { type: Number, required: true, default: 0, min: 0 },
+    purchasePrice: { type: Number, min: 0, default: 0 },
+    wholesalePrice: { type: Number, min: 0, default: 0 },
     discountType: {
       type: String,
       enum: ["flat", "percentage"],
@@ -42,6 +39,11 @@ const productSchema = new Schema<IProduct>(
     },
     productDiscount: { type: Number, default: 0, min: 0 },
     vat: { type: Number, default: 0 },
+    vatType: {
+      type: String,
+      enum: ["percentage", "flat"],
+      default: "percentage",
+    },
 
     hasVariants: { type: Boolean, default: false },
     totalStock: { type: Number, default: 0 },
@@ -56,6 +58,14 @@ const productSchema = new Schema<IProduct>(
     },
     isActive: { type: Boolean, default: true },
     
+    // Base Info Fields
+    productCode: { type: String, trim: true },
+    materials: { type: String, trim: true },
+    unitMeasure: { type: String, trim: true, default: "pcs" },
+    gender: { type: String, default: "all" },
+    barcode: { type: String, trim: true },
+    weight: { type: Number, min: 0, default: 0 },
+
     // New Design Fields
     sku: { type: String },
     isRecommended: { type: Boolean, default: false },

@@ -125,6 +125,9 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
     filter.$or = [
       { name: { $regex: searchTerm, $options: "i" } },
       { slug: { $regex: searchTerm, $options: "i" } },
+      { sku: { $regex: searchTerm, $options: "i" } },
+      { productCode: { $regex: searchTerm, $options: "i" } },
+      { barcode: { $regex: searchTerm, $options: "i" } },
       { "seo.metaKeywords": { $in: [new RegExp(searchTerm as string, "i")] } },
     ];
   }

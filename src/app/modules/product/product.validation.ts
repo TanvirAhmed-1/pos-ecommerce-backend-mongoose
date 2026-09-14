@@ -67,12 +67,17 @@ const createProductSchema = z.object({
       .number({
         message: "Reseller price is required",
       })
-      .nonnegative("Reseller price cannot be negative"),
+      .nonnegative("Reseller price cannot be negative")
+      .default(0),
+
+    purchasePrice: z.number().nonnegative().optional().default(0),
+    wholesalePrice: z.number().nonnegative().optional().default(0),
 
     discountType: z.enum(["flat", "percentage"]).default("flat"),
     productDiscount: z.number().nonnegative().default(0),
 
-    vat: z.number().min(0).max(100, "VAT cannot exceed 100%").default(0),
+    vatType: z.enum(["percentage", "flat"]).default("percentage").optional(),
+    vat: z.number().nonnegative("VAT cannot be negative").default(0),
 
     // Inventory & Status
     hasVariants: z.boolean().default(false),
@@ -82,6 +87,14 @@ const createProductSchema = z.object({
       .enum(["published", "hidden", "out_of_stock"])
       .default("published"),
     isActive: z.boolean().default(true),
+
+    // Base Info Fields
+    productCode: z.string().optional(),
+    materials: z.string().optional(),
+    unitMeasure: z.string().optional(),
+    gender: z.string().optional(),
+    barcode: z.string().optional(),
+    weight: z.number().nonnegative().optional(),
 
     // New Design Fields
     sku: z.string().optional(),
@@ -115,13 +128,22 @@ const updateProductSchema = z.object({
     basePrice: z.number().nonnegative().optional(),
     salePrice: z.number().nonnegative().optional(),
     resellerPrice: z.number().nonnegative().optional(),
+    purchasePrice: z.number().nonnegative().optional(),
+    wholesalePrice: z.number().nonnegative().optional(),
     discountType: z.enum(["flat", "percentage"]).optional(),
     productDiscount: z.number().nonnegative().optional(),
-    vat: z.number().min(0).max(100).optional(),
+    vatType: z.enum(["percentage", "flat"]).optional(),
+    vat: z.number().nonnegative().optional(),
     hasVariants: z.boolean().optional(),
     totalStock: z.number().int().nonnegative().optional(),
     visibility: z.enum(["published", "hidden", "out_of_stock"]).optional(),
     isActive: z.boolean().optional(),
+    productCode: z.string().optional(),
+    materials: z.string().optional(),
+    unitMeasure: z.string().optional(),
+    gender: z.string().optional(),
+    barcode: z.string().optional(),
+    weight: z.number().nonnegative().optional(),
     sku: z.string().optional(),
     isRecommended: z.boolean().optional(),
     isCategoryProduct: z.boolean().optional(),

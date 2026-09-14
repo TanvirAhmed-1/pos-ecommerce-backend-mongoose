@@ -24,6 +24,15 @@ export interface IProduct extends Document {
   discountType: "flat" | "percentage";
   productDiscount: number;
   vat: number;
+  vatType?: "percentage" | "flat";
+  purchasePrice?: number;
+  wholesalePrice?: number;
+  productCode?: string;
+  materials?: string;
+  unitMeasure?: string;
+  gender?: string;
+  barcode?: string;
+  weight?: number;
   hasVariants: boolean;
   totalStock: number;
   averageRating: number;
