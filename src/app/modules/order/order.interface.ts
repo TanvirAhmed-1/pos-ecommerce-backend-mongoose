@@ -1,10 +1,10 @@
 import { Document, Types } from "mongoose";
 
 export interface IOrder extends Document {
-  user: Types.ObjectId;
+  user?: Types.ObjectId;
   items: {
     product: Types.ObjectId;
-    variant: Types.ObjectId;
+    variant?: Types.ObjectId;
     quantity: number;
     price: number;
   }[];
@@ -16,13 +16,13 @@ export interface IOrder extends Document {
     city: string;
   };
   payment: {
-    method: "bkash" | "nagad" | "cod" | "online_payment";
+    method: "bkash" | "nagad" | "cod" | "online_payment" | "cash" | "card" | "pos" | "bank_transfer";
     status: "pending" | "paid" | "failed" | "cancelled";
     transactionId?: string;
     date?: Date;
   };
   orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  deliveryType: "home_delivery" | "pickup";
+  deliveryType: "home_delivery" | "pickup" | "pos_takeaway";
   // New Design Fields
   orderNumber?: string;
   address?: Types.ObjectId;
@@ -31,4 +31,7 @@ export interface IOrder extends Document {
   vat?: number;
   deliveryCharge?: number;
   paymentStatus?: string;
+  notes?: string;
+  source?: "web" | "pos" | "admin";
 }
+

@@ -287,14 +287,20 @@ export const uploadCompanyFiles = () => {
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 2 * 1024 * 1024, // 2MB limit
+      fileSize: 5 * 1024 * 1024, // 5MB limit
     },
     fileFilter: fileFilter,
   });
 
   const uploadFields = upload.fields([
     { name: "logo", maxCount: 1 },
+    { name: "companyLogo", maxCount: 1 },
     { name: "favicon", maxCount: 1 },
+    { name: "adminFavicon", maxCount: 1 },
+    { name: "careSectionBg", maxCount: 1 },
+    { name: "companyAboutImg", maxCount: 1 },
+    { name: "ogImg", maxCount: 1 },
+    { name: "loginBgImg", maxCount: 1 },
   ]);
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -302,7 +308,7 @@ export const uploadCompanyFiles = () => {
       if (err) {
         if (err instanceof multer.MulterError) {
           if (err.code === "LIMIT_FILE_SIZE") {
-            return next(new AppError(httpStatus.BAD_REQUEST, "One or more files exceed the 2MB size limit!"));
+            return next(new AppError(httpStatus.BAD_REQUEST, "One or more files exceed the size limit!"));
           }
           return next(new AppError(httpStatus.BAD_REQUEST, err.message));
         }
@@ -313,16 +319,39 @@ export const uploadCompanyFiles = () => {
 
       try {
         if (files) {
-          // 1. Process logo
           if (files.logo && files.logo.length > 0) {
             const result = await uploadToCloudinary(files.logo[0].buffer, "company");
             req.body.logo = result.secure_url;
+            req.body.companyLogo = result.secure_url;
           }
-
-          // 2. Process favicon
+          if (files.companyLogo && files.companyLogo.length > 0) {
+            const result = await uploadToCloudinary(files.companyLogo[0].buffer, "company");
+            req.body.logo = result.secure_url;
+            req.body.companyLogo = result.secure_url;
+          }
           if (files.favicon && files.favicon.length > 0) {
             const result = await uploadToCloudinary(files.favicon[0].buffer, "company");
             req.body.favicon = result.secure_url;
+          }
+          if (files.adminFavicon && files.adminFavicon.length > 0) {
+            const result = await uploadToCloudinary(files.adminFavicon[0].buffer, "company");
+            req.body.adminFavicon = result.secure_url;
+          }
+          if (files.careSectionBg && files.careSectionBg.length > 0) {
+            const result = await uploadToCloudinary(files.careSectionBg[0].buffer, "company");
+            req.body.careSectionBg = result.secure_url;
+          }
+          if (files.companyAboutImg && files.companyAboutImg.length > 0) {
+            const result = await uploadToCloudinary(files.companyAboutImg[0].buffer, "company");
+            req.body.companyAboutImg = result.secure_url;
+          }
+          if (files.ogImg && files.ogImg.length > 0) {
+            const result = await uploadToCloudinary(files.ogImg[0].buffer, "company");
+            req.body.ogImg = result.secure_url;
+          }
+          if (files.loginBgImg && files.loginBgImg.length > 0) {
+            const result = await uploadToCloudinary(files.loginBgImg[0].buffer, "company");
+            req.body.loginBgImg = result.secure_url;
           }
         }
         next();

@@ -1,11 +1,32 @@
 import axios from "axios";
+import mongoose from "mongoose";
 import config from "../../config";
 import { OrderModel } from "../order/order.model";
 import { CartModel } from "../cart/cart.model";
 import { PaymentModel } from "./payment.model";
 import { VariantModel } from "../variant/variant.model";
+import { ProductModel } from "../product/product.model";
 import { InvoiceService } from "../invoice/invoice.services";
 import { UserModel } from "../user/user.model";
+
+const updateProductTotalStock = async (productId: string | mongoose.Types.ObjectId) => {
+  try {
+    const totalStockData = await VariantModel.aggregate([
+      {
+        $match: {
+          product: new mongoose.Types.ObjectId(productId.toString()),
+          isActive: true,
+        },
+      },
+      { $group: { _id: "$product", total: { $sum: "$stock" } } },
+    ]);
+    const totalStock = totalStockData.length > 0 ? totalStockData[0].total : 0;
+    await ProductModel.findByIdAndUpdate(productId, { totalStock });
+  } catch (err) {
+    console.error("Failed to update product totalStock:", err);
+  }
+};
+
 
 const getBkashHeaders = async () => {
   try {
@@ -84,9 +105,15 @@ const executeBkashPayment = async (paymentID: string, userId: string) => {
     const order = await OrderModel.findById(orderId);
     if (order) {
       for (const item of order.items) {
-        await VariantModel.findByIdAndUpdate(item.variant, { $inc: { stock: -item.quantity } });
+        if (item.variant) {
+          await VariantModel.findByIdAndUpdate(item.variant, { $inc: { stock: -item.quantity } });
+        }
+        if (item.product) {
+          await updateProductTotalStock(item.product.toString());
+        }
       }
     }
+
 
     await CartModel.findOneAndUpdate({ user: userId }, { items: [], totalAmount: 0 });
 
@@ -96,7 +123,7 @@ const executeBkashPayment = async (paymentID: string, userId: string) => {
 };
 
 const getAllPaymentsFromDB = async (query: Record<string, any>) => {
-  const { page = 1, limit = 20, searchTerm, status, gateway } = query;
+  const { page = 1, limit = 20, searchTerm, status, gateway, startDate, endDate } = query;
 
   let filter: any = {};
 
@@ -106,6 +133,21 @@ const getAllPaymentsFromDB = async (query: Record<string, any>) => {
 
   if (gateway && gateway !== "All") {
     filter.paymentGateway = gateway.toUpperCase();
+  }
+
+  if (startDate || endDate) {
+    const dateFilter: any = {};
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.$gte = start;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.$lte = end;
+    }
+    filter.createdAt = dateFilter;
   }
 
   if (searchTerm) {
@@ -141,36 +183,47 @@ const getAllPaymentsFromDB = async (query: Record<string, any>) => {
   const result = await paymentQuery;
   const total = await PaymentModel.countDocuments(filter);
 
-  // Statistics
-  const allStats = await PaymentModel.aggregate([
-    {
-      $group: {
-        _id: null,
-        totalPayments: { $sum: 1 },
-        successfulPayments: {
-          $sum: { $cond: [{ $eq: ["$status", "SUCCESS"] }, 1, 0] }
+  // Statistics aggregated for date range
+  const statMatch: any = {};
+  if (startDate || endDate) {
+    statMatch.createdAt = filter.createdAt;
+  }
+
+  const statPipeline: any[] = [];
+  if (Object.keys(statMatch).length > 0) {
+    statPipeline.push({ $match: statMatch });
+  }
+  statPipeline.push({
+    $group: {
+      _id: null,
+      totalPayments: { $sum: 1 },
+      successfulPayments: {
+        $sum: { $cond: [{ $eq: ["$status", "SUCCESS"] }, 1, 0] },
+      },
+      pendingPayments: {
+        $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] },
+      },
+      failedPayments: {
+        $sum: {
+          $cond: [{ $in: ["$status", ["FAILED", "CANCELLED"]] }, 1, 0],
         },
-        pendingPayments: {
-          $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] }
+      },
+      totalAmountCollected: {
+        $sum: {
+          $cond: [{ $eq: ["$status", "SUCCESS"] }, "$amount", 0],
         },
-        totalAmountCollected: {
-          $sum: {
-            $cond: [
-              { $eq: ["$status", "SUCCESS"] },
-              "$amount",
-              0
-            ]
-          }
-        }
-      }
-    }
-  ]);
+      },
+    },
+  });
+
+  const allStats = await PaymentModel.aggregate(statPipeline);
 
   const stats = allStats[0] || {
     totalPayments: 0,
     successfulPayments: 0,
     pendingPayments: 0,
-    totalAmountCollected: 0
+    failedPayments: 0,
+    totalAmountCollected: 0,
   };
 
   return {
@@ -179,7 +232,7 @@ const getAllPaymentsFromDB = async (query: Record<string, any>) => {
       limit: Number(limit),
       total,
       totalPage: Math.ceil(total / Number(limit)),
-      stats
+      stats,
     },
     data: result,
   };

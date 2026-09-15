@@ -2,9 +2,20 @@ import { OrderModel } from "../order/order.model";
 import { ProductModel } from "../product/product.model";
 import { UserModel } from "../user/user.model";
 
-const getOverviewDataFromDB = async () => {
+const getOverviewDataFromDB = async (query: Record<string, unknown> = {}) => {
+  const dateFilter: any = {};
+  if (query.startDate || query.endDate) {
+    dateFilter.createdAt = {};
+    if (query.startDate) {
+      dateFilter.createdAt.$gte = new Date(`${query.startDate}T00:00:00.000Z`);
+    }
+    if (query.endDate) {
+      dateFilter.createdAt.$lte = new Date(`${query.endDate}T23:59:59.999Z`);
+    }
+  }
+
   // 1. Get totals
-  const totalOrders = await OrderModel.countDocuments({});
+  const totalOrders = await OrderModel.countDocuments(dateFilter);
   const totalProducts = await ProductModel.countDocuments({});
   const totalUsers = await UserModel.countDocuments({});
 
@@ -12,7 +23,8 @@ const getOverviewDataFromDB = async () => {
   const revenueAggregation = await OrderModel.aggregate([
     {
       $match: {
-        orderStatus: { $ne: "cancelled" }
+        orderStatus: { $ne: "cancelled" },
+        ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {})
       }
     },
     {
@@ -27,6 +39,11 @@ const getOverviewDataFromDB = async () => {
 
   // 3. Order status breakdown
   const statusStats = await OrderModel.aggregate([
+    {
+      $match: {
+        ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {})
+      }
+    },
     {
       $group: {
         _id: "$orderStatus",
@@ -49,17 +66,24 @@ const getOverviewDataFromDB = async () => {
     }
   });
 
-  // 4. Monthly sales aggregation for current year
+  // 4. Monthly sales aggregation
   const currentYear = new Date().getFullYear();
+  const salesMatch: any = {
+    orderStatus: { $ne: "cancelled" }
+  };
+
+  if (dateFilter.createdAt) {
+    salesMatch.createdAt = dateFilter.createdAt;
+  } else {
+    salesMatch.createdAt = {
+      $gte: new Date(`${currentYear}-01-01`),
+      $lte: new Date(`${currentYear}-12-31`)
+    };
+  }
+
   const monthlySales = await OrderModel.aggregate([
     {
-      $match: {
-        createdAt: {
-          $gte: new Date(`${currentYear}-01-01`),
-          $lte: new Date(`${currentYear}-12-31`)
-        },
-        orderStatus: { $ne: "cancelled" }
-      }
+      $match: salesMatch
     },
     {
       $group: {
@@ -88,8 +112,8 @@ const getOverviewDataFromDB = async () => {
     }
   });
 
-  // 5. Recent orders
-  const recentOrders = await OrderModel.find({})
+  // 5. Recent orders within filter
+  const recentOrders = await OrderModel.find(dateFilter)
     .sort({ createdAt: -1 })
     .limit(5)
     .populate("user", "name email phone");
@@ -107,15 +131,26 @@ const getOverviewDataFromDB = async () => {
   };
 };
 
-const getAnalyticsDataFromDB = async () => {
-  // Compute hourly heatmap over the last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+const getAnalyticsDataFromDB = async (query: Record<string, unknown> = {}) => {
+  let dateCondition: any;
+  if (query.startDate || query.endDate) {
+    dateCondition = {};
+    if (query.startDate) {
+      dateCondition.$gte = new Date(`${query.startDate}T00:00:00.000Z`);
+    }
+    if (query.endDate) {
+      dateCondition.$lte = new Date(`${query.endDate}T23:59:59.999Z`);
+    }
+  } else {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    dateCondition = { $gte: thirtyDaysAgo };
+  }
 
   const heatmapAgg = await OrderModel.aggregate([
     {
       $match: {
-        createdAt: { $gte: thirtyDaysAgo }
+        createdAt: dateCondition
       }
     },
     {
@@ -151,8 +186,13 @@ const getAnalyticsDataFromDB = async () => {
     };
   });
 
-  // Product sales counts breakdown
+  // Product sales counts breakdown within date range
   const topProductsAgg = await OrderModel.aggregate([
+    {
+      $match: {
+        createdAt: dateCondition
+      }
+    },
     { $unwind: "$items" },
     {
       $group: {
@@ -165,7 +205,7 @@ const getAnalyticsDataFromDB = async () => {
     { $limit: 5 }
   ]);
 
-  // Populate product details manually to prevent schema compilation issues
+  // Populate product details manually
   const topProducts = await Promise.all(
     topProductsAgg.map(async (item) => {
       const prod = await ProductModel.findById(item._id).select("name thumbnail sku totalStock");
@@ -191,3 +231,4 @@ export const DashboardServices = {
   getOverviewDataFromDB,
   getAnalyticsDataFromDB
 };
+

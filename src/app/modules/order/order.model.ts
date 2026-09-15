@@ -3,7 +3,7 @@ import { IOrder } from "./order.interface";
 
 const orderSchema = new Schema<IOrder>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: Schema.Types.ObjectId, ref: "User" },
     items: [
       {
         product: {
@@ -14,7 +14,6 @@ const orderSchema = new Schema<IOrder>(
         variant: {
           type: Schema.Types.ObjectId,
           ref: "Variant",
-          required: true,
         },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
@@ -30,7 +29,7 @@ const orderSchema = new Schema<IOrder>(
     payment: {
       method: {
         type: String,
-        enum: ["bkash", "nagad", "cod", "online_payment"],
+        enum: ["bkash", "nagad", "cod", "online_payment", "cash", "card", "pos", "bank_transfer"],
         required: true,
       },
       status: {
@@ -48,7 +47,7 @@ const orderSchema = new Schema<IOrder>(
     },
     deliveryType: {
       type: String,
-      enum: ["home_delivery", "pickup"],
+      enum: ["home_delivery", "pickup", "pos_takeaway"],
       default: "home_delivery",
     },
     // New Design Fields
@@ -59,8 +58,11 @@ const orderSchema = new Schema<IOrder>(
     vat: { type: Number, default: 0 },
     deliveryCharge: { type: Number, default: 0 },
     paymentStatus: { type: String, default: "pending" },
+    notes: { type: String },
+    source: { type: String, enum: ["web", "pos", "admin"], default: "web" },
   },
   { timestamps: true },
 );
 
 export const OrderModel = model<IOrder>("Order", orderSchema);
+

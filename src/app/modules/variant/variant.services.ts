@@ -47,12 +47,18 @@ const getAllVariantsWithProductDetailsFromDB = async () => {
   const result = await VariantModel.find({ isActive: true })
     .populate({
       path: "product",
-      select: "name slug image description",
+      select:
+        "name slug thumbnail images category brand totalStock sku productCode basePrice salePrice description",
+      populate: [
+        { path: "category", select: "name slug" },
+        { path: "brand", select: "name logo" },
+      ],
     })
     .populate({
       path: "attributes.attribute",
-      select: "name",
-    });
+      select: "name slug",
+    })
+    .sort({ createdAt: -1 });
 
   return result;
 };

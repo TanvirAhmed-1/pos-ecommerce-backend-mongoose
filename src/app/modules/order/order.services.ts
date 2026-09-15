@@ -2,8 +2,35 @@ import mongoose from "mongoose";
 import { CartModel } from "../cart/cart.model";
 import { OrderModel } from "./order.model";
 import { VariantModel } from "../variant/variant.model";
+import { ProductModel } from "../product/product.model";
+import { PaymentModel } from "../payment/payment.model";
 import { InvoiceService } from "../invoice/invoice.services";
 import { UserModel } from "../user/user.model";
+
+const updateProductTotalStock = async (
+  productId: string | mongoose.Types.ObjectId,
+  session?: mongoose.ClientSession
+) => {
+  try {
+    const totalStockData = await VariantModel.aggregate([
+      {
+        $match: {
+          product: new mongoose.Types.ObjectId(productId.toString()),
+          isActive: true,
+        },
+      },
+      { $group: { _id: "$product", total: { $sum: "$stock" } } },
+    ]);
+    const totalStock = totalStockData.length > 0 ? totalStockData[0].total : 0;
+    await ProductModel.findByIdAndUpdate(
+      productId,
+      { totalStock },
+      { session: session || null }
+    );
+  } catch (err) {
+    console.error("Failed to update product totalStock:", err);
+  }
+};
 
 const createOrderIntoDB = async (userId: string, payload: any) => {
   const session = await mongoose.startSession();
@@ -15,7 +42,6 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       throw new Error("Cart is empty!");
     }
 
-    // অর্ডার ডাটা প্রস্তুত (পেমেন্ট স্ট্যাটাস সবসময় pending থাকবে শুরুতে)
     const orderData = {
       user: userId,
       items: cart.items,
@@ -28,6 +54,7 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       },
       deliveryType: payload.deliveryType,
       orderStatus: "pending",
+      source: "web",
     };
 
     const order = await OrderModel.create([orderData], { session });
@@ -35,16 +62,21 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
     // Generate Invoice automatically for the order
     await InvoiceService.createInvoiceFromOrder(order[0]._id.toString(), session);
 
-    // যদি COD হয়, তবে কার্ট খালি এবং স্টক এখনই কমিয়ে ফেলুন
+    // If COD, deduct variant stock and sync parent total stock
     if (payload.paymentMethod === "cod") {
       for (const item of cart.items) {
-        await VariantModel.findByIdAndUpdate(
-          item.variant,
-          { $inc: { stock: -item.quantity } },
-          { session },
-        );
+        if (item.variant) {
+          await VariantModel.findByIdAndUpdate(
+            item.variant,
+            { $inc: { stock: -item.quantity } },
+            { session },
+          );
+        }
+        if (item.product) {
+          await updateProductTotalStock(item.product.toString(), session);
+        }
       }
-      // কার্ট খালি করা
+      // Empty cart
       await CartModel.findOneAndUpdate(
         { user: userId },
         { items: [], totalAmount: 0, totalItems: 0 },
@@ -62,10 +94,157 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
   }
 };
 
+const createAdminOrder = async (adminId: string, payload: any) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const {
+      user,
+      customerInfo,
+      items,
+      shippingAddress,
+      subtotal,
+      discount = 0,
+      vat = 0,
+      deliveryCharge = 0,
+      totalAmount,
+      paymentMethod = "cash",
+      paymentStatus = "paid",
+      orderStatus = "processing",
+      deliveryType = "home_delivery",
+      notes,
+      source = "pos",
+    } = payload;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      throw new Error("Order must have at least one product item!");
+    }
+
+    const finalShippingAddress = shippingAddress || {
+      fullName: customerInfo?.fullName || "Walk-in Customer",
+      phone: customerInfo?.phone || "01700000000",
+      address: customerInfo?.address || "Store Outlet",
+      city: customerInfo?.city || "Dhaka",
+    };
+
+    const calculatedSubtotal =
+      subtotal ||
+      items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+    const calculatedTotal =
+      totalAmount ||
+      calculatedSubtotal - (discount || 0) + (vat || 0) + (deliveryCharge || 0);
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = `ORD-${dateStr}-${randomSuffix}`;
+    const transactionId = `TXN-${dateStr}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const orderData = {
+      orderNumber,
+      user: user || undefined,
+      items: items.map((it: any) => ({
+        product: it.product,
+        variant: it.variant || undefined,
+        quantity: it.quantity,
+        price: it.price,
+      })),
+      subtotal: calculatedSubtotal,
+      discount,
+      vat,
+      deliveryCharge,
+      totalAmount: calculatedTotal,
+      shippingAddress: finalShippingAddress,
+      payment: {
+        method: paymentMethod,
+        status: paymentStatus,
+        transactionId,
+        date: new Date(),
+      },
+      paymentStatus,
+      orderStatus,
+      deliveryType,
+      notes,
+      source,
+    };
+
+    const order = await OrderModel.create([orderData], { session });
+    const createdOrder = order[0];
+
+    // Deduct stock for each variant & sync parent product totalStock
+    for (const item of items) {
+      if (item.variant) {
+        await VariantModel.findByIdAndUpdate(
+          item.variant,
+          { $inc: { stock: -item.quantity } },
+          { session }
+        );
+      }
+      if (item.product) {
+        await updateProductTotalStock(item.product, session);
+      }
+    }
+
+    // Auto-generate invoice
+    const invoice = await InvoiceService.createInvoiceFromOrder(
+      createdOrder._id.toString(),
+      session
+    );
+
+    // If paid, create Payment document
+    if (paymentStatus === "paid") {
+      const pGateway =
+        paymentMethod.toUpperCase() === "COD" ? "CASH" : paymentMethod.toUpperCase();
+      await PaymentModel.create(
+        [
+          {
+            transactionId,
+            order: createdOrder._id,
+            user: user || (adminId ? new mongoose.Types.ObjectId(adminId) : undefined),
+            amount: calculatedTotal,
+            currency: "BDT",
+            paymentGateway: pGateway,
+            status: "SUCCESS",
+            paymentData: {
+              source,
+              receivedBy: adminId,
+              notes: notes || "POS/Admin direct sale",
+            },
+          },
+        ],
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    const populatedOrder = await OrderModel.findById(createdOrder._id)
+      .populate("user", "name email phone role")
+      .populate(
+        "items.product",
+        "name thumbnail slug basePrice salePrice totalStock sku barcode"
+      )
+      .populate({
+        path: "items.variant",
+        populate: { path: "attributes.attribute", select: "name" },
+      });
+
+    return {
+      order: populatedOrder,
+      invoice,
+    };
+  } catch (error: any) {
+    await session.abortTransaction();
+    session.endSession();
+    throw new Error(error.message);
+  }
+};
+
 const getMyOrdersFromDB = async (userId: string) => {
   return await OrderModel.find({ user: userId })
     .populate("items.product", "name thumbnail slug")
-    .sort("-createdAt"); 
+    .sort("-createdAt");
 };
 
 const getSingleOrderFromDB = async (orderId: string, userId: string) => {
@@ -74,7 +253,11 @@ const getSingleOrderFromDB = async (orderId: string, userId: string) => {
     .populate("items.variant");
 };
 
-const updateOrderStatusInDB = async (orderId: string, status?: string, paymentStatus?: string) => {
+const updateOrderStatusInDB = async (
+  orderId: string,
+  status?: string,
+  paymentStatus?: string
+) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -84,19 +267,24 @@ const updateOrderStatusInDB = async (orderId: string, status?: string, paymentSt
       throw new Error("Order not found!");
     }
 
-    // যদি অর্ডার অলরেডি ডেলিভারড হয়ে যায়, তবে আর ক্যানসেল করা যাবে না
+    // If already delivered, cannot cancel
     if (status === "cancelled" && order.orderStatus === "delivered") {
       throw new Error("Delivered order cannot be cancelled!");
     }
 
-    // যদি অর্ডার ক্যানসেল করা হয়, তবে স্টক ফেরত দেওয়া (Restock)
+    // If cancelled, restock variants and sync parent product totalStock
     if (status === "cancelled" && order.orderStatus !== "cancelled") {
       for (const item of order.items) {
-        await VariantModel.findByIdAndUpdate(
-          item.variant,
-          { $inc: { stock: item.quantity } },
-          { session },
-        );
+        if (item.variant) {
+          await VariantModel.findByIdAndUpdate(
+            item.variant,
+            { $inc: { stock: item.quantity } },
+            { session },
+          );
+        }
+        if (item.product) {
+          await updateProductTotalStock(item.product.toString(), session);
+        }
       }
     }
 
@@ -106,14 +294,13 @@ const updateOrderStatusInDB = async (orderId: string, status?: string, paymentSt
     }
     if (paymentStatus) {
       updateData["payment.status"] = paymentStatus;
+      updateData.paymentStatus = paymentStatus;
     }
 
-    // স্ট্যাটাস আপডেট
-    const result = await OrderModel.findByIdAndUpdate(
-      orderId,
-      updateData,
-      { new: true, session },
-    );
+    const result = await OrderModel.findByIdAndUpdate(orderId, updateData, {
+      new: true,
+      session,
+    });
 
     if (status === "cancelled" || paymentStatus === "cancelled") {
       await InvoiceService.updateInvoicePaymentStatus(orderId, "cancelled");
@@ -132,12 +319,27 @@ const updateOrderStatusInDB = async (orderId: string, status?: string, paymentSt
 };
 
 const getAllOrdersFromDB = async (query: Record<string, any>) => {
-  const { page = 1, limit = 20, searchTerm, status } = query;
+  const { page = 1, limit = 20, searchTerm, status, startDate, endDate } = query;
 
   let filter: any = {};
 
   if (status && status !== "All") {
     filter.orderStatus = status.toLowerCase();
+  }
+
+  if (startDate || endDate) {
+    const dateFilter: any = {};
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.$gte = start;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.$lte = end;
+    }
+    filter.createdAt = dateFilter;
   }
 
   if (searchTerm) {
@@ -152,6 +354,7 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
     const userIds = matchingUsers.map((u) => u._id);
 
     filter.$or = [
+      { orderNumber: { $regex: searchTerm, $options: "i" } },
       { user: { $in: userIds } },
       { "shippingAddress.fullName": { $regex: searchTerm, $options: "i" } },
       { "shippingAddress.phone": { $regex: searchTerm, $options: "i" } },
@@ -164,7 +367,10 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
 
   const orderQuery = OrderModel.find(filter)
     .populate("user", "name email phone role")
-    .populate("items.product", "name thumbnail slug basePrice salePrice totalStock hasVariants sku productCode barcode")
+    .populate(
+      "items.product",
+      "name thumbnail slug basePrice salePrice totalStock hasVariants sku productCode barcode"
+    )
     .populate({
       path: "items.variant",
       populate: { path: "attributes.attribute", select: "name" },
@@ -176,39 +382,58 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
   const result = await orderQuery;
   const total = await OrderModel.countDocuments(filter);
 
-  // Global order statistics aggregation
-  const allStats = await OrderModel.aggregate([
-    {
-      $group: {
-        _id: null,
-        totalOrders: { $sum: 1 },
-        pendingOrders: {
-          $sum: { $cond: [{ $eq: ["$orderStatus", "pending"] }, 1, 0] }
-        },
-        processingOrders: {
-          $sum: { $cond: [{ $eq: ["$orderStatus", "processing"] }, 1, 0] }
-        },
-        totalSales: {
-          $sum: {
-            $cond: [
-              { $or: [
+  // Global & Date-filtered order statistics aggregation
+  const statMatch: any = {};
+  if (startDate || endDate) {
+    statMatch.createdAt = filter.createdAt;
+  }
+
+  const statPipeline: any[] = [];
+  if (Object.keys(statMatch).length > 0) {
+    statPipeline.push({ $match: statMatch });
+  }
+  statPipeline.push({
+    $group: {
+      _id: null,
+      totalOrders: { $sum: 1 },
+      pendingOrders: {
+        $sum: { $cond: [{ $eq: ["$orderStatus", "pending"] }, 1, 0] },
+      },
+      processingOrders: {
+        $sum: { $cond: [{ $eq: ["$orderStatus", "processing"] }, 1, 0] },
+      },
+      deliveredOrders: {
+        $sum: { $cond: [{ $eq: ["$orderStatus", "delivered"] }, 1, 0] },
+      },
+      cancelledOrders: {
+        $sum: { $cond: [{ $eq: ["$orderStatus", "cancelled"] }, 1, 0] },
+      },
+      totalSales: {
+        $sum: {
+          $cond: [
+            {
+              $or: [
                 { $eq: ["$orderStatus", "delivered"] },
-                { $eq: ["$payment.status", "paid"] }
-              ]},
-              "$totalAmount",
-              0
-            ]
-          }
-        }
-      }
-    }
-  ]);
+                { $eq: ["$payment.status", "paid"] },
+              ],
+            },
+            "$totalAmount",
+            0,
+          ],
+        },
+      },
+    },
+  });
+
+  const allStats = await OrderModel.aggregate(statPipeline);
 
   const stats = allStats[0] || {
     totalOrders: 0,
     pendingOrders: 0,
     processingOrders: 0,
-    totalSales: 0
+    deliveredOrders: 0,
+    cancelledOrders: 0,
+    totalSales: 0,
   };
 
   return {
@@ -217,11 +442,12 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
       limit: Number(limit),
       total,
       totalPage: Math.ceil(total / Number(limit)),
-      stats
+      stats,
     },
     data: result,
   };
 };
+
 
 const deleteOrderFromDB = async (orderId: string) => {
   const result = await OrderModel.findByIdAndDelete(orderId);
@@ -233,9 +459,12 @@ const deleteOrderFromDB = async (orderId: string) => {
 
 export const OrderService = {
   createOrderIntoDB,
+  createAdminOrder,
   getMyOrdersFromDB,
   getSingleOrderFromDB,
   updateOrderStatusInDB,
   getAllOrdersFromDB,
   deleteOrderFromDB,
+  updateProductTotalStock,
 };
+

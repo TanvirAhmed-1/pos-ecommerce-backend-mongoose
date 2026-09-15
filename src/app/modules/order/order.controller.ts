@@ -97,7 +97,7 @@ const getAllOrders = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteOrder = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const result = await OrderService.deleteOrderFromDB(id);
 
   res.status(httpStatus.OK).json({
@@ -107,11 +107,26 @@ const deleteOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+const createAdminOrder = catchAsync(async (req: Request, res: Response) => {
+  const adminId = req.user?.id;
+  const result = await OrderService.createAdminOrder(adminId, req.body);
+
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: "Admin / POS Order created successfully",
+    data: result.order,
+    invoice: result.invoice,
+  });
+});
+
 export const OrderController = {
   createOrder,
+  createAdminOrder,
   getMyOrders,
   getSingleOrder,
   updateOrderStatus,
   getAllOrders,
   deleteOrder,
 };
+

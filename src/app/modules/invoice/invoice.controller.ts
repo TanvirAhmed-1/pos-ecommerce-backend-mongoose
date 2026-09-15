@@ -28,8 +28,17 @@ const getInvoiceByOrderId = catchAsync(async (req: Request, res: Response) => {
 
   // Security check: only allow order owner or admin/superadmin to view
   const user = req.user;
-  const invoiceUserId = invoice.user && (invoice.user as any)._id ? (invoice.user as any)._id.toString() : invoice.user.toString();
-  if (user.role !== "admin" && user.role !== "superadmin" && invoiceUserId !== user.id) {
+  const invoiceUserId = invoice.user
+    ? (invoice.user as any)._id
+      ? (invoice.user as any)._id.toString()
+      : invoice.user.toString()
+    : null;
+  if (
+    user.role !== "admin" &&
+    user.role !== "superadmin" &&
+    invoiceUserId &&
+    invoiceUserId !== user.id
+  ) {
     throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to view this invoice");
   }
 
@@ -50,10 +59,20 @@ const getInvoiceById = catchAsync(async (req: Request, res: Response) => {
 
   // Security check: only allow invoice owner or admin/superadmin to view
   const user = req.user;
-  const invoiceUserId = invoice.user && (invoice.user as any)._id ? (invoice.user as any)._id.toString() : invoice.user.toString();
-  if (user.role !== "admin" && user.role !== "superadmin" && invoiceUserId !== user.id) {
+  const invoiceUserId = invoice.user
+    ? (invoice.user as any)._id
+      ? (invoice.user as any)._id.toString()
+      : invoice.user.toString()
+    : null;
+  if (
+    user.role !== "admin" &&
+    user.role !== "superadmin" &&
+    invoiceUserId &&
+    invoiceUserId !== user.id
+  ) {
     throw new AppError(httpStatus.FORBIDDEN, "You do not have permission to view this invoice");
   }
+
 
   res.status(httpStatus.OK).json({
     success: true,
@@ -74,13 +93,15 @@ const getMyInvoices = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllInvoices = catchAsync(async (req: Request, res: Response) => {
-  const { page, limit, paymentStatus, paymentMethod, search } = req.query;
+  const { page, limit, paymentStatus, paymentMethod, search, startDate, endDate } = req.query;
   const result = await InvoiceService.getAllInvoices({
     page: page ? Number(page) : 1,
     limit: limit ? Number(limit) : 20,
     paymentStatus: paymentStatus as string,
     paymentMethod: paymentMethod as string,
     search: search as string,
+    startDate: startDate as string,
+    endDate: endDate as string,
   });
 
   res.status(httpStatus.OK).json({

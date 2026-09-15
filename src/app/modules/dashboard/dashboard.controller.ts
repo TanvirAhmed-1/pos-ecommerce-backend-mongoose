@@ -4,7 +4,7 @@ import catchAsync from "../../utils/catchAsync";
 import { DashboardServices } from "./dashboard.services";
 
 const getOverview = catchAsync(async (req: Request, res: Response) => {
-  const result = await DashboardServices.getOverviewDataFromDB();
+  const result = await DashboardServices.getOverviewDataFromDB(req.query);
   res.status(httpStatus.OK).json({
     success: true,
     message: "Overview statistics retrieved successfully!",
@@ -13,7 +13,7 @@ const getOverview = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAnalytics = catchAsync(async (req: Request, res: Response) => {
-  const result = await DashboardServices.getAnalyticsDataFromDB();
+  const result = await DashboardServices.getAnalyticsDataFromDB(req.query);
   res.status(httpStatus.OK).json({
     success: true,
     message: "Analytics statistics retrieved successfully!",

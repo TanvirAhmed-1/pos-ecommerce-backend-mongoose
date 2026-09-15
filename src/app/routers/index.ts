@@ -20,6 +20,7 @@ import { UploadRoutes } from "../modules/upload/upload.route";
 import { DashboardRoutes } from "../modules/dashboard/dashboard.route";
 import { MailRoutes } from "../modules/mail/mail.route";
 import { ReviewRoutes } from "../modules/review/review.route";
+import { AccountingRoutes } from "../modules/accounting/accounting.route";
 
 const routet = Router();
 const allRouters = [
@@ -44,7 +45,9 @@ const allRouters = [
   DashboardRoutes,
   MailRoutes,
   ReviewRoutes,
+  AccountingRoutes,
 ];
+
 
 allRouters.forEach((router) => {
   routet.use(router);

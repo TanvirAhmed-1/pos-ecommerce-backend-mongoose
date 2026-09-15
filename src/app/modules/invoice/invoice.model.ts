@@ -5,7 +5,7 @@ const invoiceSchema = new Schema<IInvoice>(
   {
     invoiceNumber: { type: String, required: true, unique: true },
     order: { type: Schema.Types.ObjectId, ref: "Order", required: true },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: Schema.Types.ObjectId, ref: "User" },
     payment: { type: Schema.Types.ObjectId, ref: "Payment" },
     invoiceDate: { type: Date, default: Date.now },
     totalAmount: { type: Number, required: true },
@@ -15,7 +15,7 @@ const invoiceSchema = new Schema<IInvoice>(
     deliveryCharge: { type: Number, default: 0 },
     paymentMethod: {
       type: String,
-      enum: ["bkash", "nagad", "cod", "online_payment"],
+      enum: ["bkash", "nagad", "cod", "online_payment", "cash", "card", "pos", "bank_transfer"],
       required: true,
     },
     paymentStatus: {
@@ -26,7 +26,7 @@ const invoiceSchema = new Schema<IInvoice>(
     items: [
       {
         product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-        variant: { type: Schema.Types.ObjectId, ref: "Variant", required: true },
+        variant: { type: Schema.Types.ObjectId, ref: "Variant" },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
       },
@@ -42,3 +42,4 @@ const invoiceSchema = new Schema<IInvoice>(
 );
 
 export const InvoiceModel = model<IInvoice>("Invoice", invoiceSchema);
+

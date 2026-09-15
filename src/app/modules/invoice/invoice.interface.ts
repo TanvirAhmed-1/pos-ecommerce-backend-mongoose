@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 export interface IInvoice {
   invoiceNumber: string;
   order: Types.ObjectId;
-  user: Types.ObjectId;
+  user?: Types.ObjectId;
   payment?: Types.ObjectId;
   invoiceDate: Date;
   totalAmount: number;
@@ -11,11 +11,11 @@ export interface IInvoice {
   discount: number;
   vat: number;
   deliveryCharge: number;
-  paymentMethod: "bkash" | "nagad" | "cod" | "online_payment";
+  paymentMethod: "bkash" | "nagad" | "cod" | "online_payment" | "cash" | "card" | "pos" | "bank_transfer";
   paymentStatus: "pending" | "paid" | "failed" | "cancelled";
   items: {
     product: Types.ObjectId;
-    variant: Types.ObjectId;
+    variant?: Types.ObjectId;
     quantity: number;
     price: number;
   }[];
@@ -26,3 +26,4 @@ export interface IInvoice {
     city: string;
   };
 }
+

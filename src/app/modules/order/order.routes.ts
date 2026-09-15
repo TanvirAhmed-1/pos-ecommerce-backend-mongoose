@@ -16,11 +16,18 @@ router.post(
   OrderController.createOrder,
 );
 
+router.post(
+  "/create-admin-order",
+  auth("admin", "superadmin"),
+  OrderController.createAdminOrder,
+);
+
 router.patch(
   "/update-status/:id",
   auth("admin", "superadmin"),
   OrderController.updateOrderStatus,
 );
+
 
 router.get(
   "/all-orders",
