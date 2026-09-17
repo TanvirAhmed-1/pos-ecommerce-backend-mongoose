@@ -120,12 +120,25 @@ const createAdminOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateAdminOrder = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const adminId = req.user?.id;
+  const result = await OrderService.updateAdminOrderInDB(id as string, adminId, req.body);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: "Order details updated and confirmed successfully",
+    data: result,
+  });
+});
+
 export const OrderController = {
   createOrder,
   createAdminOrder,
   getMyOrders,
   getSingleOrder,
   updateOrderStatus,
+  updateAdminOrder,
   getAllOrders,
   deleteOrder,
 };

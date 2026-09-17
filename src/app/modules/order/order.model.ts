@@ -60,6 +60,27 @@ const orderSchema = new Schema<IOrder>(
     paymentStatus: { type: String, default: "pending" },
     notes: { type: String },
     source: { type: String, enum: ["web", "pos", "admin"], default: "web" },
+    alternativePhone: { type: String },
+    courier: { type: String, default: "Steadfast" },
+    callStatus: {
+      type: String,
+      enum: ["pending", "confirmed", "no_answer", "call_later", "cancelled", "wrong_number"],
+      default: "pending",
+    },
+    callAttempts: { type: Number, default: 0 },
+    callLogs: [
+      {
+        callStatus: { type: String },
+        note: { type: String },
+        agentName: { type: String },
+        date: { type: Date, default: Date.now },
+      },
+    ],
+    confirmedBy: {
+      name: { type: String },
+      email: { type: String },
+      date: { type: Date },
+    },
   },
   { timestamps: true },
 );

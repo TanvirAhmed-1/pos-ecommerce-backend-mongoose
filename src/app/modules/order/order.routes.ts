@@ -28,6 +28,12 @@ router.patch(
   OrderController.updateOrderStatus,
 );
 
+router.patch(
+  "/update-order/:id",
+  auth("admin", "superadmin"),
+  OrderController.updateAdminOrder,
+);
+
 
 router.get(
   "/all-orders",

@@ -5,6 +5,7 @@ import { VariantModel } from "../variant/variant.model";
 import { ProductModel } from "../product/product.model";
 import { PaymentModel } from "../payment/payment.model";
 import { InvoiceService } from "../invoice/invoice.services";
+import { InvoiceModel } from "../invoice/invoice.model";
 import { UserModel } from "../user/user.model";
 
 const updateProductTotalStock = async (
@@ -449,6 +450,174 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
 };
 
 
+const updateAdminOrderInDB = async (orderId: string, adminId: string, payload: any) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const existingOrder = await OrderModel.findById(orderId).session(session);
+    if (!existingOrder) {
+      throw new Error("Order not found!");
+    }
+
+    const {
+      shippingAddress,
+      alternativePhone,
+      items,
+      subtotal,
+      discount,
+      deliveryCharge,
+      vat,
+      totalAmount,
+      orderStatus,
+      paymentStatus,
+      paymentMethod,
+      courier,
+      notes,
+      callStatus,
+      callNote,
+      agentName,
+    } = payload;
+
+    // 1. Stock Adjustment if items list is provided and changed
+    if (items && Array.isArray(items) && items.length > 0) {
+      // Step A: Restock previous items if order was active (not cancelled)
+      if (existingOrder.orderStatus !== "cancelled") {
+        for (const oldItem of existingOrder.items) {
+          if (oldItem.variant) {
+            await VariantModel.findByIdAndUpdate(
+              oldItem.variant,
+              { $inc: { stock: oldItem.quantity } },
+              { session }
+            );
+          }
+          if (oldItem.product) {
+            await updateProductTotalStock(oldItem.product.toString(), session);
+          }
+        }
+      }
+
+      // Step B: Deduct stock for updated items (unless target status is cancelled)
+      const targetStatus = orderStatus || existingOrder.orderStatus;
+      if (targetStatus !== "cancelled") {
+        for (const newItem of items) {
+          const variantId = newItem.variant?._id || newItem.variant;
+          const productId = newItem.product?._id || newItem.product;
+
+          if (variantId) {
+            const v = await VariantModel.findById(variantId).session(session);
+            if (!v || v.stock < newItem.quantity) {
+              throw new Error(
+                `Insufficient stock for variant (${v?.sku || "Variant"})! Available stock: ${v?.stock || 0}`
+              );
+            }
+            await VariantModel.findByIdAndUpdate(
+              variantId,
+              { $inc: { stock: -newItem.quantity } },
+              { session }
+            );
+          }
+          if (productId) {
+            await updateProductTotalStock(productId.toString(), session);
+          }
+        }
+      }
+    }
+
+    // 2. Prepare Update Object
+    const updateData: any = {};
+    if (shippingAddress) {
+      updateData.shippingAddress = shippingAddress;
+    }
+    if (alternativePhone !== undefined) {
+      updateData.alternativePhone = alternativePhone;
+    }
+    if (items && Array.isArray(items) && items.length > 0) {
+      updateData.items = items.map((it: any) => ({
+        product: it.product?._id || it.product,
+        variant: it.variant?._id || it.variant || undefined,
+        quantity: Number(it.quantity || 1),
+        price: Number(it.price || 0),
+      }));
+    }
+    if (subtotal !== undefined) updateData.subtotal = Number(subtotal);
+    if (discount !== undefined) updateData.discount = Number(discount);
+    if (deliveryCharge !== undefined) updateData.deliveryCharge = Number(deliveryCharge);
+    if (vat !== undefined) updateData.vat = Number(vat);
+    if (totalAmount !== undefined) updateData.totalAmount = Number(totalAmount);
+    if (orderStatus) updateData.orderStatus = orderStatus;
+    if (paymentStatus) {
+      updateData["payment.status"] = paymentStatus;
+      updateData.paymentStatus = paymentStatus;
+    }
+    if (paymentMethod) {
+      updateData["payment.method"] = paymentMethod;
+    }
+    if (courier) updateData.courier = courier;
+    if (notes !== undefined) updateData.notes = notes;
+
+    // Tele-Call confirmation logging
+    if (callStatus) {
+      updateData.callStatus = callStatus;
+      if (callStatus === "confirmed") {
+        if (!orderStatus || orderStatus === "pending") {
+          updateData.orderStatus = "processing";
+        }
+        updateData.confirmedBy = {
+          name: agentName || "Admin Agent",
+          date: new Date(),
+        };
+      }
+    }
+
+    if (callStatus || callNote) {
+      const newLog = {
+        callStatus: callStatus || existingOrder.callStatus || "pending",
+        note: callNote || "",
+        agentName: agentName || "Admin Agent",
+        date: new Date(),
+      };
+      updateData.$push = { callLogs: newLog };
+      updateData.$inc = { callAttempts: 1 };
+    }
+
+    const updated = await OrderModel.findByIdAndUpdate(orderId, updateData, {
+      new: true,
+      session,
+    })
+      .populate("user", "name email phone role")
+      .populate("items.product")
+      .populate("items.variant");
+
+    // 3. Sync Invoice if exists
+    try {
+      if (totalAmount !== undefined || paymentStatus !== undefined || shippingAddress) {
+        await InvoiceModel.findOneAndUpdate(
+          { order: orderId },
+          {
+            totalAmount: updated?.totalAmount,
+            status: paymentStatus || updated?.payment?.status,
+            customerName: updated?.shippingAddress?.fullName,
+            customerPhone: updated?.shippingAddress?.phone,
+            customerAddress: updated?.shippingAddress?.address,
+          },
+          { session }
+        );
+      }
+    } catch (invErr) {
+      console.log("Invoice sync warning:", invErr);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+    return updated;
+  } catch (error: any) {
+    await session.abortTransaction();
+    session.endSession();
+    throw new Error(error.message);
+  }
+};
+
 const deleteOrderFromDB = async (orderId: string) => {
   const result = await OrderModel.findByIdAndDelete(orderId);
   if (!result) {
@@ -463,6 +632,7 @@ export const OrderService = {
   getMyOrdersFromDB,
   getSingleOrderFromDB,
   updateOrderStatusInDB,
+  updateAdminOrderInDB,
   getAllOrdersFromDB,
   deleteOrderFromDB,
   updateProductTotalStock,

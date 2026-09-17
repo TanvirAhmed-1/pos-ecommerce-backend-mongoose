@@ -33,5 +33,20 @@ export interface IOrder extends Document {
   paymentStatus?: string;
   notes?: string;
   source?: "web" | "pos" | "admin";
+  alternativePhone?: string;
+  courier?: string;
+  callStatus?: "pending" | "confirmed" | "no_answer" | "call_later" | "cancelled" | "wrong_number";
+  callAttempts?: number;
+  callLogs?: {
+    callStatus: string;
+    note?: string;
+    agentName?: string;
+    date: Date;
+  }[];
+  confirmedBy?: {
+    name: string;
+    email?: string;
+    date: Date;
+  };
 }
 
