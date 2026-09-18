@@ -21,6 +21,7 @@ import { DashboardRoutes } from "../modules/dashboard/dashboard.route";
 import { MailRoutes } from "../modules/mail/mail.route";
 import { ReviewRoutes } from "../modules/review/review.route";
 import { AccountingRoutes } from "../modules/accounting/accounting.route";
+import { BannerRoutes } from "../modules/banner/banner.routes";
 
 const routet = Router();
 const allRouters = [
@@ -34,6 +35,7 @@ const allRouters = [
   WishlistRoutes,
   OrderRoutes,
   SliderRoutes,
+  BannerRoutes,
   SectionRoutes,
   PaymentRoutes,
   CompanyRoutes,
