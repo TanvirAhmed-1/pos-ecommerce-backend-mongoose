@@ -132,15 +132,31 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
     ];
   }
 
-  // ২. ফিল্টারিং লজিক (সাপোর্ট আইডি এবং স্ল্যাগ)
+  // ২. ফিল্টারিং লজিক (সাপোর্ট আইডি, স্ল্যাগ এবং নাম)
   if (category) {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(category as string);
     if (isObjectId) {
-      filter.category = category;
+      const subCats = await CategoryModel.find({ parent: category });
+      if (subCats.length > 0) {
+        filter.category = { $in: [category, ...subCats.map((c) => c._id)] };
+      } else {
+        filter.category = category;
+      }
     } else {
-      const foundCategory = await CategoryModel.findOne({ slug: category });
+      const foundCategory = await CategoryModel.findOne({
+        $or: [
+          { slug: category },
+          { name: new RegExp(`^${(category as string).replace(/[-_]/g, " ")}$`, "i") },
+          { name: new RegExp(`^${category}$`, "i") },
+        ],
+      });
       if (foundCategory) {
-        filter.category = foundCategory._id;
+        const subCats = await CategoryModel.find({ parent: foundCategory._id });
+        if (subCats.length > 0) {
+          filter.category = { $in: [foundCategory._id, ...subCats.map((c) => c._id)] };
+        } else {
+          filter.category = foundCategory._id;
+        }
       } else {
         filter.category = "000000000000000000000000";
       }
@@ -152,7 +168,13 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
     if (isObjectId) {
       filter.subcategory = subcategory;
     } else {
-      const foundSubcategory = await CategoryModel.findOne({ slug: subcategory });
+      const foundSubcategory = await CategoryModel.findOne({
+        $or: [
+          { slug: subcategory },
+          { name: new RegExp(`^${(subcategory as string).replace(/[-_]/g, " ")}$`, "i") },
+          { name: new RegExp(`^${subcategory}$`, "i") },
+        ],
+      });
       if (foundSubcategory) {
         filter.subcategory = foundSubcategory._id;
       } else {

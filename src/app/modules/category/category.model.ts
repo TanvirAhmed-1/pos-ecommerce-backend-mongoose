@@ -7,6 +7,9 @@ const categorySchema = new Schema<ICategory>(
     slug: { type: String, unique: true, lowercase: true },
     level: { type: Number, default: 0 },
     title: { type: String, trim: true },
+    subtitle: { type: String, trim: true },
+    banner: { type: String, trim: true },
+    description: { type: String, trim: true },
     image: { type: String, trim: true },
     parentCategory: { 
       type: Schema.Types.ObjectId, 

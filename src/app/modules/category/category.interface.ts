@@ -5,6 +5,9 @@ export interface ICategory {
   slug: string;
   level: number;
   title?: string;
+  subtitle?: string;
+  banner?: string;
+  description?: string;
   image?: string;
   parentCategory?: Types.ObjectId;
   ancestors: Types.ObjectId[];

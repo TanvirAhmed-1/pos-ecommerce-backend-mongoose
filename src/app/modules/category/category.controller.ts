@@ -32,12 +32,13 @@ const getFooterCategories = catchAsync(
   },
 );
 
-const getAllCategories = catchAsync(async (_req: Request, res: Response) => {
-  const result = await CategoryService.getAllCategories();
+const getAllCategories = catchAsync(async (req: Request, res: Response) => {
+  const result = await CategoryService.getAllCategories(req.query);
   res.status(status.OK).json({
     success: true,
-    message: "All categories fetched successfully",
-    data: result,
+    message: "Categories fetched successfully",
+    meta: result.meta,
+    data: result.data,
   });
 });
 

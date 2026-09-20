@@ -38,14 +38,19 @@ const getNavCategories = async () => {
       slug: cat.slug,
       level: cat.level,
       title: cat.title,
+      subtitle: cat.subtitle,
+      banner: cat.banner,
+      description: cat.description,
       image: cat.image,
       isFeatured: cat.isFeatured,
+      showInNavbar: cat.showInNavbar,
       parentCategory: cat.parentCategory,
       children: [],
     };
   });
 
   const tree: any[] = [];
+  const hasSpecificNavFlag = allActiveCategories.some((c) => !c.parentCategory && c.showInNavbar);
 
   allActiveCategories.forEach((cat) => {
     const currentCat = categoryMap[cat._id.toString()];
@@ -59,7 +64,7 @@ const getNavCategories = async () => {
       }
     } else {
       // Root/Main category (level === 0 or no parentCategory)
-      if (cat.showInNavbar) {
+      if (!hasSpecificNavFlag || cat.showInNavbar) {
         const { parentCategory, ...rootData } = currentCat;
         tree.push(rootData);
       }
@@ -77,38 +82,130 @@ const getFooterCategories = async () => {
     .lean();
 };
 
-const getAllCategories = async () => {
-  const allCategories = await CategoryModel.find().lean();
+const getAllCategories = async (query: Record<string, unknown> = {}) => {
+  const {
+    searchTerm,
+    search,
+    isActive,
+    showInNavbar,
+    showInFooter,
+    isFeatured,
+    page = 1,
+    limit = 20,
+    isAll,
+  } = query;
 
-  const categoryMap: Record<string, any> = {};
-  allCategories.forEach((cat) => {
-    categoryMap[cat._id.toString()] = {
-      ...cat,
-      children: [],
-    };
-  });
+  const filter: any = {};
 
-  const tree: any[] = [];
+  const searchKey = (searchTerm || search) as string | undefined;
+  if (searchKey && typeof searchKey === "string" && searchKey.trim()) {
+    filter.$or = [
+      { name: { $regex: searchKey.trim(), $options: "i" } },
+      { slug: { $regex: searchKey.trim(), $options: "i" } },
+      { title: { $regex: searchKey.trim(), $options: "i" } },
+      { subtitle: { $regex: searchKey.trim(), $options: "i" } },
+    ];
+  }
 
-  // ২. ট্রিতে কনভার্ট করার সময় চাইল্ড থেকে parentCategory সরিয়ে ফেলা
-  allCategories.forEach((cat) => {
-    const currentCat = categoryMap[cat._id.toString()];
+  if (isActive !== undefined && isActive !== "" && isActive !== "all") {
+    filter.isActive = isActive === "true" || isActive === true;
+  }
 
-    if (cat.parentCategory) {
-      const parentId = cat.parentCategory.toString();
+  if (showInNavbar !== undefined && showInNavbar !== "" && showInNavbar !== "all") {
+    filter.showInNavbar = showInNavbar === "true" || showInNavbar === true;
+  }
 
-      if (categoryMap[parentId]) {
-        // চাইল্ড হিসেবে পুশ করার আগে parentCategory ফিল্ডটি ডিলিট করে দিন
-        const { parentCategory, ...childData } = currentCat;
-        categoryMap[parentId].children.push(childData);
+  if (showInFooter !== undefined && showInFooter !== "" && showInFooter !== "all") {
+    filter.showInFooter = showInFooter === "true" || showInFooter === true;
+  }
+
+  if (isFeatured !== undefined && isFeatured !== "" && isFeatured !== "all") {
+    filter.isFeatured = isFeatured === "true" || isFeatured === true;
+  }
+
+  // 1. Fetch all matching categories
+  const allMatching = await CategoryModel.find(filter)
+    .populate("parentCategory", "name slug")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // 2. Build hierarchical ordered list (Parent followed by its direct children and subchildren)
+  const hierarchicalList: any[] = [];
+  const addedIds = new Set<string>();
+
+  const buildTree = (parentId: string | null = null) => {
+    const directChildren = allMatching.filter((cat: any) => {
+      if (parentId === null) {
+        return !cat.parentCategory;
       }
-    } else {
-      // রুট ক্যাটাগরিগুলো সরাসরি ট্রিতে যাবে
-      tree.push(currentCat);
+      const pId =
+        typeof cat.parentCategory === "object" && cat.parentCategory !== null
+          ? cat.parentCategory._id?.toString()
+          : cat.parentCategory?.toString();
+      return pId === parentId;
+    });
+
+    directChildren.forEach((child: any) => {
+      const childId = child._id.toString();
+      const hasChildren = allMatching.some((c: any) => {
+        const pId =
+          typeof c.parentCategory === "object" && c.parentCategory !== null
+            ? c.parentCategory._id?.toString()
+            : c.parentCategory?.toString();
+        return pId === childId;
+      });
+
+      hierarchicalList.push({
+        ...child,
+        hasChildren,
+      });
+      addedIds.add(childId);
+      buildTree(childId);
+    });
+  };
+
+  buildTree(null);
+
+  // If some orphan or filtered items were not attached to a root in this result set, append them
+  allMatching.forEach((c: any) => {
+    const cId = c._id.toString();
+    if (!addedIds.has(cId)) {
+      hierarchicalList.push({
+        ...c,
+        hasChildren: false,
+      });
+      addedIds.add(cId);
     }
   });
 
-  return tree;
+  const total = hierarchicalList.length;
+
+  if (isAll === "true" || isAll === true || limit === "0" || limit === "all") {
+    return {
+      meta: {
+        page: 1,
+        limit: total,
+        total,
+        totalPage: 1,
+      },
+      data: hierarchicalList,
+    };
+  }
+
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 20);
+  const skip = (pageNum - 1) * limitNum;
+  const paginatedResult = hierarchicalList.slice(skip, skip + limitNum);
+
+  return {
+    meta: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalPage: Math.ceil(total / limitNum),
+    },
+    data: paginatedResult,
+  };
 };
 
 const updateCategoryInDB = async (id: string, payload: Partial<any>) => {
