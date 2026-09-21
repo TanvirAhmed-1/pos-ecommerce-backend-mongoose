@@ -21,6 +21,17 @@ const createProductSchema = z.object({
       .min(10, "Short description must be at least 10 characters"),
 
     description: z.string().optional(),
+    keyFeatures: z.array(z.string()).optional(),
+    specifications: z
+      .array(
+        z.object({
+          key: z.string(),
+          value: z.string(),
+        })
+      )
+      .optional(),
+    warranty: z.string().optional(),
+    warrantyPolicy: z.string().optional(),
 
     // SEO Validation
     seo: z
@@ -110,6 +121,17 @@ const updateProductSchema = z.object({
     name: z.string().min(3).max(255).optional(),
     shortDescription: z.string().min(10).optional(),
     description: z.string().optional(),
+    keyFeatures: z.array(z.string()).optional(),
+    specifications: z
+      .array(
+        z.object({
+          key: z.string(),
+          value: z.string(),
+        })
+      )
+      .optional(),
+    warranty: z.string().optional(),
+    warrantyPolicy: z.string().optional(),
     seo: z
       .object({
         metaTitle: z.string().max(70).optional(),

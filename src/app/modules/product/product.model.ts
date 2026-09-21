@@ -20,6 +20,15 @@ const productSchema = new Schema<IProduct>(
     slug: { type: String, unique: true, lowercase: true },
     shortDescription: { type: String, required: true },
     description: { type: String },
+    keyFeatures: [{ type: String, trim: true }],
+    specifications: [
+      {
+        key: { type: String, trim: true },
+        value: { type: String, trim: true },
+      },
+    ],
+    warranty: { type: String, trim: true },
+    warrantyPolicy: { type: String },
     seo: { type: seoSchema },
     company: { type: Schema.Types.ObjectId, ref: "Company", required: true },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },

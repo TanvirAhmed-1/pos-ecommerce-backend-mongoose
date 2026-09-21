@@ -5,6 +5,10 @@ export interface IProduct extends Document {
   slug: string;
   shortDescription: string;
   description?: string;
+  keyFeatures?: string[];
+  specifications?: Array<{ key: string; value: string }>;
+  warranty?: string;
+  warrantyPolicy?: string;
   seo?: {
     metaTitle?: string;
     metaDescription?: string;
