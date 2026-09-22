@@ -67,7 +67,7 @@ const updateUser = catchAsync(async (req: Request, res: Response) => {
 
 // UPDATE USER BY ID (ADMIN/SUPERADMIN)
 const updateUserById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const result = await UserService.updateUser(id, req.body);
   if (!result)
     return res.status(status.NOT_FOUND).json({

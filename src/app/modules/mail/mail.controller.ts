@@ -67,7 +67,7 @@ const getAllMails = catchAsync(async (req: Request, res: Response) => {
 
 // GET /mail/:id — get single mail
 const getMailById = catchAsync(async (req: Request, res: Response) => {
-  const mail = await MailService.getMailById(req.params.id);
+  const mail = await MailService.getMailById(req.params.id as string);
   if (!mail) throw new AppError(httpStatus.NOT_FOUND, "Mail not found");
 
   res.status(httpStatus.OK).json({ success: true, message: "Mail retrieved", data: mail });
@@ -75,7 +75,7 @@ const getMailById = catchAsync(async (req: Request, res: Response) => {
 
 // DELETE /mail/:id
 const deleteMail = catchAsync(async (req: Request, res: Response) => {
-  await MailService.deleteMail(req.params.id);
+  await MailService.deleteMail(req.params.id as string);
   res.status(httpStatus.OK).json({ success: true, message: "Mail deleted" });
 });
 

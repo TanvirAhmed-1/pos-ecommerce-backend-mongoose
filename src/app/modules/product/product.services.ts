@@ -56,15 +56,42 @@ const createProductIntoDB = async (payload: any) => {
 
   // If variants are supplied and hasVariants is true, save them
   if (result && productData.hasVariants && Array.isArray(variants) && variants.length > 0) {
-    // Auto-register custom attribute values that aren't in the attribute's values array
+    // Auto-register custom attribute values and resolve ObjectIds
     for (const v of variants) {
       if (Array.isArray(v.attributes)) {
-        for (const attrEntry of v.attributes) {
-          if (attrEntry.attribute && attrEntry.value) {
-            await AttributeModel.findByIdAndUpdate(attrEntry.attribute, {
+        for (let i = 0; i < v.attributes.length; i++) {
+          const attrEntry = v.attributes[i];
+          let attrId = attrEntry.attribute?._id || attrEntry.attribute;
+          const attrName =
+            attrEntry.name ||
+            attrEntry.attribute?.name ||
+            (typeof attrId === "string" && !mongoose.Types.ObjectId.isValid(attrId) ? attrId : null);
+
+          if (attrName) {
+            let attrDoc = await AttributeModel.findOne({
+              name: new RegExp(`^${attrName.trim()}$`, "i"),
+            });
+            if (!attrDoc) {
+              attrDoc = await AttributeModel.create({
+                name: attrName.trim(),
+                values: [attrEntry.value].filter(Boolean),
+              });
+            } else if (attrEntry.value) {
+              await AttributeModel.findByIdAndUpdate(attrDoc._id, {
+                $addToSet: { values: attrEntry.value },
+              });
+            }
+            attrId = attrDoc._id;
+          } else if (attrId && mongoose.Types.ObjectId.isValid(attrId) && attrEntry.value) {
+            await AttributeModel.findByIdAndUpdate(attrId, {
               $addToSet: { values: attrEntry.value },
             });
           }
+
+          v.attributes[i] = {
+            attribute: attrId,
+            value: attrEntry.value,
+          };
         }
       }
     }
@@ -212,11 +239,13 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   const productQuery = ProductModel.find(filter)
-    .populate("company", "name logo socialMedia email phone address")
-    .populate("category", "name slug")
-    .populate("brand", "name logo")
+    .select("-company -purchasePrice -resellerPrice -warranty -__v")
+    .populate("category", "_id name slug")
+    .populate("subcategory", "_id name slug")
+    .populate("brand", "_id name slug logo")
     .populate({
       path: "productVariants",
+      select: "_id sku price stock images attributes isActive",
       populate: {
         path: "attributes.attribute",
         select: "name",
@@ -232,8 +261,38 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
     productQuery.sort("-createdAt");
   }
 
-  const result = await productQuery;
+  const rawResult = await productQuery;
   const total = await ProductModel.countDocuments(filter);
+
+  const cleanResult = rawResult.map((prod) => {
+    const p = prod.toObject() as any;
+    delete p.company;
+    delete p.socialMedia;
+    delete p.purchasePrice;
+    delete p.resellerPrice;
+    delete p.warranty;
+    delete p.__v;
+
+    if (p.hasVariants && Array.isArray(p.productVariants)) {
+      p.productVariants = p.productVariants
+        .filter((v: any) => v.isActive !== false)
+        .map((variant: any) => ({
+          _id: variant._id,
+          sku: variant.sku,
+          price: variant.price,
+          stock: variant.stock,
+          images: variant.images || [],
+          attributes: (variant.attributes || []).map((attrEntry: any) => ({
+            name: attrEntry.attribute?.name || attrEntry.name || "Option",
+            value: attrEntry.value,
+          })),
+          isActive: variant.isActive !== false,
+        }));
+    } else {
+      p.productVariants = [];
+    }
+    return p;
+  });
 
   return {
     meta: {
@@ -242,17 +301,19 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
       total,
       totalPage: Math.ceil(total / Number(limit)),
     },
-    data: result,
+    data: cleanResult,
   };
 };
 
 const getSingleProductBySlugFromDB = async (slug: string) => {
   const result = await ProductModel.findOne({ slug, isActive: true })
-    .populate("company", "name logo socialMedia email phone address")
-    .populate("category")
-    .populate("brand")
+    .select("-company -purchasePrice -resellerPrice -warranty -isRecommended -isCategoryProduct -isTopSelling -createdAt -updatedAt -__v")
+    .populate("category", "_id name slug")
+    .populate("subcategory", "_id name slug")
+    .populate("brand", "_id name slug logo")
     .populate({
       path: "productVariants",
+      select: "_id sku price stock images attributes isActive",
       populate: {
         path: "attributes.attribute",
         select: "name",
@@ -263,30 +324,64 @@ const getSingleProductBySlugFromDB = async (slug: string) => {
     throw new AppError(httpStatus.NOT_FOUND, "Product not found!");
   }
 
-  const productObj = result.toObject();
+  const productObj = result.toObject() as any;
 
-  if (productObj.hasVariants && productObj.productVariants) {
+  // Strip unneeded fields from the single product detail response
+  delete productObj.company;
+  delete productObj.socialMedia;
+  delete productObj.purchasePrice;
+  delete productObj.resellerPrice;
+  delete productObj.warranty;
+  delete productObj.isRecommended;
+  delete productObj.isCategoryProduct;
+  delete productObj.isTopSelling;
+  delete productObj.createdAt;
+  delete productObj.updatedAt;
+  delete productObj.__v;
+
+  // Format clean productVariants & variantAttributes
+  if (productObj.hasVariants && Array.isArray(productObj.productVariants)) {
+    const cleanVariants: any[] = [];
     const attributeMap: Record<string, Set<string>> = {};
+
     productObj.productVariants.forEach((variant: any) => {
-      if (!variant.isActive) return;
-      variant.attributes?.forEach((attrEntry: any) => {
-        const name = attrEntry.attribute?.name || "Option";
-        if (name && attrEntry.value) {
-          if (!attributeMap[name]) {
-            attributeMap[name] = new Set<string>();
+      if (variant.isActive === false) return;
+
+      const cleanAttributes = (variant.attributes || []).map((attrEntry: any) => {
+        const attrName = attrEntry.attribute?.name || attrEntry.name || "Option";
+        const attrVal = attrEntry.value;
+
+        if (attrName && attrVal) {
+          if (!attributeMap[attrName]) {
+            attributeMap[attrName] = new Set<string>();
           }
-          attributeMap[name].add(attrEntry.value);
+          attributeMap[attrName].add(attrVal);
         }
+
+        return {
+          name: attrName,
+          value: attrVal,
+        };
+      });
+
+      cleanVariants.push({
+        _id: variant._id,
+        sku: variant.sku,
+        price: variant.price,
+        stock: variant.stock,
+        images: variant.images || [],
+        attributes: cleanAttributes,
+        isActive: variant.isActive !== false,
       });
     });
 
-    const uniqueAttributes = Object.keys(attributeMap).map(name => ({
+    productObj.productVariants = cleanVariants;
+    productObj.variantAttributes = Object.keys(attributeMap).map((name) => ({
       name,
-      values: Array.from(attributeMap[name])
+      values: Array.from(attributeMap[name]),
     }));
-
-    productObj.variantAttributes = uniqueAttributes;
   } else {
+    productObj.productVariants = [];
     productObj.variantAttributes = [];
   }
 
@@ -365,15 +460,42 @@ const updateProductInDB = async (id: string, payload: any) => {
       // Delete existing variants
       await VariantModel.deleteMany({ product: id });
 
-      // Auto-register custom attribute values
+      // Auto-register custom attribute values and resolve ObjectIds
       for (const v of variants) {
         if (Array.isArray(v.attributes)) {
-          for (const attrEntry of v.attributes) {
-            if (attrEntry.attribute && attrEntry.value) {
-              await AttributeModel.findByIdAndUpdate(attrEntry.attribute, {
+          for (let i = 0; i < v.attributes.length; i++) {
+            const attrEntry = v.attributes[i];
+            let attrId = attrEntry.attribute?._id || attrEntry.attribute;
+            const attrName =
+              attrEntry.name ||
+              attrEntry.attribute?.name ||
+              (typeof attrId === "string" && !mongoose.Types.ObjectId.isValid(attrId) ? attrId : null);
+
+            if (attrName) {
+              let attrDoc = await AttributeModel.findOne({
+                name: new RegExp(`^${attrName.trim()}$`, "i"),
+              });
+              if (!attrDoc) {
+                attrDoc = await AttributeModel.create({
+                  name: attrName.trim(),
+                  values: [attrEntry.value].filter(Boolean),
+                });
+              } else if (attrEntry.value) {
+                await AttributeModel.findByIdAndUpdate(attrDoc._id, {
+                  $addToSet: { values: attrEntry.value },
+                });
+              }
+              attrId = attrDoc._id;
+            } else if (attrId && mongoose.Types.ObjectId.isValid(attrId) && attrEntry.value) {
+              await AttributeModel.findByIdAndUpdate(attrId, {
                 $addToSet: { values: attrEntry.value },
               });
             }
+
+            v.attributes[i] = {
+              attribute: attrId,
+              value: attrEntry.value,
+            };
           }
         }
       }

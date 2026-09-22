@@ -27,7 +27,6 @@ const productSchema = new Schema<IProduct>(
         value: { type: String, trim: true },
       },
     ],
-    warranty: { type: String, trim: true },
     warrantyPolicy: { type: String },
     seo: { type: seoSchema },
     company: { type: Schema.Types.ObjectId, ref: "Company", required: true },
@@ -38,8 +37,6 @@ const productSchema = new Schema<IProduct>(
     images: [{ type: String }],
     basePrice: { type: Number, required: true, min: 0 },
     salePrice: { type: Number, required: true, min: 0 },
-    resellerPrice: { type: Number, required: true, default: 0, min: 0 },
-    purchasePrice: { type: Number, min: 0, default: 0 },
     wholesalePrice: { type: Number, min: 0, default: 0 },
     discountType: {
       type: String,
@@ -103,10 +100,6 @@ productSchema
   .set(function (this: IProduct, value: boolean) {
     this._isWishlisted = value;
   });
-
-productSchema.virtual("socialMedia").get(function (this: any) {
-  return this.company?.socialMedia || [];
-});
 
 // --- Pre-save Hooks (Professional Syntax) ---
 productSchema.pre("save", async function (this: IProduct) {

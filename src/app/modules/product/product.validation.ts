@@ -30,7 +30,6 @@ const createProductSchema = z.object({
         })
       )
       .optional(),
-    warranty: z.string().optional(),
     warrantyPolicy: z.string().optional(),
 
     // SEO Validation
@@ -74,14 +73,6 @@ const createProductSchema = z.object({
       })
       .nonnegative("Sale price cannot be negative"),
 
-    resellerPrice: z
-      .number({
-        message: "Reseller price is required",
-      })
-      .nonnegative("Reseller price cannot be negative")
-      .default(0),
-
-    purchasePrice: z.number().nonnegative().optional().default(0),
     wholesalePrice: z.number().nonnegative().optional().default(0),
 
     discountType: z.enum(["flat", "percentage"]).default("flat"),
@@ -130,7 +121,6 @@ const updateProductSchema = z.object({
         })
       )
       .optional(),
-    warranty: z.string().optional(),
     warrantyPolicy: z.string().optional(),
     seo: z
       .object({
@@ -149,8 +139,6 @@ const updateProductSchema = z.object({
     images: z.array(z.string().url()).optional(),
     basePrice: z.number().nonnegative().optional(),
     salePrice: z.number().nonnegative().optional(),
-    resellerPrice: z.number().nonnegative().optional(),
-    purchasePrice: z.number().nonnegative().optional(),
     wholesalePrice: z.number().nonnegative().optional(),
     discountType: z.enum(["flat", "percentage"]).optional(),
     productDiscount: z.number().nonnegative().optional(),

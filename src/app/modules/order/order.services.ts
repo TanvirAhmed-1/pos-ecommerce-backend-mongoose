@@ -450,7 +450,7 @@ const getAllOrdersFromDB = async (query: Record<string, any>) => {
 };
 
 
-const updateAdminOrderInDB = async (orderId: string, adminId: string, payload: any) => {
+const updateAdminOrderInDB = async (orderId: string, _adminId: string, payload: any) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 

@@ -38,7 +38,7 @@ const getAllPayments = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const result = await PaymentServices.getSinglePaymentFromDB(id);
 
   res.status(httpStatus.OK).json({
@@ -49,7 +49,7 @@ const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updatePaymentStatus = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const result = await PaymentServices.updatePaymentStatusInDB(id, req.body);
 
   res.status(httpStatus.OK).json({
@@ -60,7 +60,7 @@ const updatePaymentStatus = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deletePayment = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const result = await PaymentServices.deletePaymentFromDB(id);
 
   res.status(httpStatus.OK).json({

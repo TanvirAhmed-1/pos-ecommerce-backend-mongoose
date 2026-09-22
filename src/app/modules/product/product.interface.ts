@@ -7,7 +7,6 @@ export interface IProduct extends Document {
   description?: string;
   keyFeatures?: string[];
   specifications?: Array<{ key: string; value: string }>;
-  warranty?: string;
   warrantyPolicy?: string;
   seo?: {
     metaTitle?: string;
@@ -24,12 +23,10 @@ export interface IProduct extends Document {
   images: string[];
   basePrice: number;
   salePrice: number;
-  resellerPrice: number;
   discountType: "flat" | "percentage";
   productDiscount: number;
   vat: number;
   vatType?: "percentage" | "flat";
-  purchasePrice?: number;
   wholesalePrice?: number;
   productCode?: string;
   materials?: string;

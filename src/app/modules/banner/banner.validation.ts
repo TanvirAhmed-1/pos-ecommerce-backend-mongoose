@@ -2,12 +2,12 @@ import { z } from "zod";
 
 const createBannerSchema = z.object({
   body: z.object({
-    title: z.string({ required_error: "Title is required" }).min(1, "Title cannot be empty"),
+    title: z.string({ message: "Title is required" }).min(1, "Title cannot be empty"),
     subtitle: z.string().optional(),
     description: z.string().optional(),
     buttonText: z.string().optional(),
     buttonLink: z.string().optional(),
-    imageUrl: z.string({ required_error: "Image URL is required" }).min(1, "Image URL is required"),
+    imageUrl: z.string({ message: "Image URL is required" }).min(1, "Image URL is required"),
     bgColor: z.string().optional(),
     textColor: z.string().optional(),
     badgeColor: z.string().optional(),

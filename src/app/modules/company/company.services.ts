@@ -1,6 +1,4 @@
-import { ICompany } from "./company.interface";
 import { CompanyModel } from "./company.model";
-import { deleteFromCloudinary } from "../../utils/cloudinary";
 
 const getCompanyDetails = async () => {
   const company = await CompanyModel.findOne({ isActive: true });

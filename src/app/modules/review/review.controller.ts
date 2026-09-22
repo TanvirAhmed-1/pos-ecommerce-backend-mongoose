@@ -15,7 +15,7 @@ const createReview = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getProductReviews = catchAsync(async (req: Request, res: Response) => {
-  const { productId } = req.params;
+  const productId = req.params.productId as string;
   const result = await ReviewService.getProductReviewsFromDB(productId);
 
   res.status(httpStatus.OK).json({
@@ -25,7 +25,7 @@ const getProductReviews = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllReviews = catchAsync(async (req: Request, res: Response) => {
+const getAllReviews = catchAsync(async (_req: Request, res: Response) => {
   const result = await ReviewService.getAllReviewsFromDB();
 
   res.status(httpStatus.OK).json({
@@ -36,7 +36,7 @@ const getAllReviews = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteReview = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const userId = req.user?.id;
   const userRole = req.user?.role;
 
@@ -49,7 +49,7 @@ const deleteReview = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateReviewStatus = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { status } = req.body;
 
   const result = await ReviewService.updateReviewStatusInDB(id, status);

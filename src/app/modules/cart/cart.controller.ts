@@ -43,16 +43,20 @@ const removeItem = catchAsync(async (req: Request, res: Response) => {
 
 const updateQuantity = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
-  const { variantId, action } = req.body; // action: 'increment' অথবা 'decrement'
+  const variantId = req.body.variantId || req.body.variant;
+  const action = req.body.action;
+  const quantity = req.body.quantity;
+
   const result = await CartService.updateQuantityInCartDB(
     userId,
     variantId,
     action,
+    quantity
   );
 
   res.status(httpStatus.OK).json({
     success: true,
-    message: `Quantity ${action}ed successfully`,
+    message: "Cart updated successfully",
     data: result,
   });
 });
