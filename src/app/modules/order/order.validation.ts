@@ -2,15 +2,44 @@ import { z } from "zod";
 
 const createOrderSchema = z.object({
   body: z.object({
-    shippingAddress: z.object({
-      fullName: z.string().min(3, "Full name is required"),
-      phone: z.string().min(11, "Valid phone number is required"),
-      address: z.string().min(5, "Detailed address is required"),
-      city: z.string().min(2, "City is required"),
-    }),
-    paymentMethod: z.enum(["bkash", "nagad", "cod", "online_payment"]),
-    deliveryType: z.enum(["home_delivery", "pickup"]).default("home_delivery"),
-    transactionId: z.string().optional(), // বিকাশ বা নগদের জন্য এটি প্রয়োজনীয় হতে পারে
+    address: z.string().optional(),
+    shippingAddress: z
+      .union([
+        z.string(),
+        z.object({
+          fullName: z.string().optional(),
+          phone: z.string().optional(),
+          address: z.string().optional(),
+          city: z.string().optional(),
+          division: z.string().optional(),
+          district: z.string().optional(),
+          upazila: z.string().optional(),
+        }),
+      ])
+      .optional(),
+    paymentMethod: z
+      .enum([
+        "bkash",
+        "nagad",
+        "cod",
+        "online_payment",
+        "cash",
+        "card",
+        "pos",
+        "bank_transfer",
+      ])
+      .default("cod"),
+    deliveryType: z
+      .enum(["home_delivery", "pickup", "pos_takeaway"])
+      .default("home_delivery"),
+    deliveryCharge: z.number().min(0).optional(),
+    deliveryMethod: z.string().optional(),
+    couponCode: z.string().optional(),
+    discount: z.number().min(0).optional(),
+    orderNumber: z.string().optional(),
+    transactionId: z.string().optional(),
+    notes: z.string().optional(),
+    email: z.string().optional(),
   }),
 });
 

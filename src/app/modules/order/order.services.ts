@@ -7,6 +7,9 @@ import { PaymentModel } from "../payment/payment.model";
 import { InvoiceService } from "../invoice/invoice.services";
 import { InvoiceModel } from "../invoice/invoice.model";
 import { UserModel } from "../user/user.model";
+import { AddressModel } from "../address/address.model";
+import { DistrictModel, ShippingSettingModel } from "../shipping/shipping.model";
+import { CouponModel } from "../coupon/coupon.model";
 
 const updateProductTotalStock = async (
   productId: string | mongoose.Types.ObjectId,
@@ -43,18 +46,198 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       throw new Error("Cart is empty!");
     }
 
+    // 1. Resolve final shipping address and address ID reference
+    let finalShippingAddress: any = null;
+    let addressRef: any = null;
+
+    if (
+      typeof payload.shippingAddress === "string" &&
+      mongoose.Types.ObjectId.isValid(payload.shippingAddress)
+    ) {
+      const addressDoc = await AddressModel.findById(payload.shippingAddress).session(session);
+      if (addressDoc) {
+        addressRef = addressDoc._id;
+        finalShippingAddress = {
+          fullName: addressDoc.fullName,
+          phone: addressDoc.phone,
+          address: addressDoc.address,
+          division: addressDoc.division,
+          district: addressDoc.district,
+          upazila: addressDoc.upazila,
+          city: addressDoc.district || addressDoc.division || "Dhaka",
+        };
+      }
+    } else if (payload.shippingAddress && typeof payload.shippingAddress === "object") {
+      finalShippingAddress = {
+        fullName: payload.shippingAddress.fullName || "",
+        phone: payload.shippingAddress.phone || "",
+        address: payload.shippingAddress.address || "",
+        division: payload.shippingAddress.division || "Dhaka",
+        district: payload.shippingAddress.district || "Dhaka",
+        upazila: payload.shippingAddress.upazila || "",
+        city:
+          payload.shippingAddress.city ||
+          payload.shippingAddress.district ||
+          payload.shippingAddress.division ||
+          "Dhaka",
+      };
+      if (payload.address && mongoose.Types.ObjectId.isValid(payload.address)) {
+        addressRef = payload.address;
+      }
+    }
+
+    if (
+      !finalShippingAddress ||
+      !finalShippingAddress.fullName ||
+      !finalShippingAddress.phone ||
+      !finalShippingAddress.address
+    ) {
+      if (payload.address && mongoose.Types.ObjectId.isValid(payload.address)) {
+        const addressDoc = await AddressModel.findById(payload.address).session(session);
+        if (addressDoc) {
+          addressRef = addressDoc._id;
+          finalShippingAddress = {
+            fullName: addressDoc.fullName,
+            phone: addressDoc.phone,
+            address: addressDoc.address,
+            division: addressDoc.division,
+            district: addressDoc.district,
+            upazila: addressDoc.upazila,
+            city: addressDoc.district || addressDoc.division || "Dhaka",
+          };
+        }
+      }
+    }
+
+    if (
+      !finalShippingAddress ||
+      !finalShippingAddress.fullName ||
+      !finalShippingAddress.phone ||
+      !finalShippingAddress.address
+    ) {
+      const user = await UserModel.findById(userId).session(session);
+      finalShippingAddress = {
+        fullName: finalShippingAddress?.fullName || user?.name || "Customer",
+        phone: finalShippingAddress?.phone || user?.phone || "01700000000",
+        address: finalShippingAddress?.address || "Delivery Address",
+        division: finalShippingAddress?.division || "Dhaka",
+        district: finalShippingAddress?.district || "Dhaka",
+        upazila: finalShippingAddress?.upazila || "",
+        city: finalShippingAddress?.city || finalShippingAddress?.district || "Dhaka",
+      };
+    }
+
+    // 2. Recalculate Subtotal from Live Product/Variant Data in Database
+    let calculatedSubtotal = 0;
+    const validatedItems = [];
+
+    for (const item of cart.items) {
+      let unitPrice = item.price;
+      if (item.variant) {
+        const variant = await VariantModel.findById(item.variant).session(session);
+        if (variant && typeof variant.price === "number") {
+          unitPrice = variant.price;
+        }
+      } else if (item.product) {
+        const product = await ProductModel.findById(item.product).session(session);
+        if (product) {
+          unitPrice =
+            product.salePrice && product.salePrice > 0
+              ? product.salePrice
+              : product.basePrice || item.price;
+        }
+      }
+
+      calculatedSubtotal += unitPrice * item.quantity;
+      validatedItems.push({
+        product: item.product,
+        variant: item.variant || undefined,
+        quantity: item.quantity,
+        price: unitPrice,
+      });
+    }
+
+    // 3. Calculate Delivery Charge from Database based on Shipping District
+    const targetDistrictName = (finalShippingAddress.district || "Dhaka").trim();
+    const districtDoc = await DistrictModel.findOne({
+      name: new RegExp(`^${targetDistrictName}$`, "i"),
+    }).session(session);
+
+    const settingsDoc = await ShippingSettingModel.findOne().session(session);
+
+    const isInsideDhaka = districtDoc
+      ? districtDoc.isInsideDhaka
+      : targetDistrictName.toLowerCase() === "dhaka";
+
+    const isExpress = payload.deliveryMethod === "express";
+
+    let calculatedDeliveryCharge = 0;
+    if (isInsideDhaka) {
+      calculatedDeliveryCharge = isExpress
+        ? districtDoc?.expressDeliveryCharge || settingsDoc?.insideDhakaExpressCharge || 120
+        : districtDoc?.deliveryCharge || settingsDoc?.insideDhakaDeliveryCharge || 70;
+    } else {
+      calculatedDeliveryCharge = isExpress
+        ? districtDoc?.expressDeliveryCharge || settingsDoc?.outsideDhakaExpressCharge || 180
+        : districtDoc?.deliveryCharge || settingsDoc?.outsideDhakaDeliveryCharge || 130;
+    }
+
+    // Check Free Delivery Threshold
+    if (
+      settingsDoc?.freeDeliveryThreshold &&
+      settingsDoc.freeDeliveryThreshold > 0 &&
+      calculatedSubtotal >= settingsDoc.freeDeliveryThreshold
+    ) {
+      calculatedDeliveryCharge = 0;
+    }
+
+    // 4. Calculate Discount (e.g. Coupon or Promotion)
+    let calculatedDiscount = 0;
+    if (payload.couponCode) {
+      const coupon = await CouponModel.findOne({
+        code: payload.couponCode.toUpperCase().trim(),
+      }).session(session);
+
+      if (coupon) {
+        if (coupon.type === "percentage") {
+          calculatedDiscount = Math.round((calculatedSubtotal * coupon.value) / 100);
+        } else if (coupon.type === "flat") {
+          calculatedDiscount = coupon.value;
+        }
+      }
+    } else if (payload.discount && typeof payload.discount === "number" && payload.discount > 0) {
+      calculatedDiscount = Math.min(payload.discount, calculatedSubtotal);
+    }
+
+    calculatedDiscount = Math.min(calculatedDiscount, calculatedSubtotal);
+
+    // 5. Final Total Amount
+    const totalAmount = Math.max(0, calculatedSubtotal - calculatedDiscount + calculatedDeliveryCharge);
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = payload.orderNumber || `ORD-${dateStr}-${randomSuffix}`;
+
     const orderData = {
+      orderNumber,
       user: userId,
-      items: cart.items,
-      totalAmount: cart.totalAmount,
-      shippingAddress: payload.shippingAddress,
+      address: addressRef,
+      items: validatedItems,
+      subtotal: calculatedSubtotal,
+      discount: calculatedDiscount,
+      vat: 0,
+      deliveryCharge: calculatedDeliveryCharge,
+      totalAmount,
+      shippingAddress: finalShippingAddress,
       payment: {
-        method: payload.paymentMethod,
-        status: "pending",
+        method: payload.paymentMethod || "cod",
+        status: payload.paymentMethod === "cod" ? "pending" : "pending",
+        transactionId: payload.transactionId,
         date: new Date(),
       },
-      deliveryType: payload.deliveryType,
+      deliveryType: payload.deliveryType || "home_delivery",
       orderStatus: "pending",
+      notes: payload.notes,
       source: "web",
     };
 
@@ -65,12 +248,12 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
 
     // If COD, deduct variant stock and sync parent total stock
     if (payload.paymentMethod === "cod") {
-      for (const item of cart.items) {
+      for (const item of validatedItems) {
         if (item.variant) {
           await VariantModel.findByIdAndUpdate(
             item.variant,
             { $inc: { stock: -item.quantity } },
-            { session },
+            { session }
           );
         }
         if (item.product) {
@@ -81,13 +264,19 @@ const createOrderIntoDB = async (userId: string, payload: any) => {
       await CartModel.findOneAndUpdate(
         { user: userId },
         { items: [], totalAmount: 0, totalItems: 0 },
-        { session },
+        { session }
       );
     }
 
+    const populatedOrder = await OrderModel.findById(order[0]._id)
+      .populate("items.product", "name thumbnail slug sku basePrice salePrice")
+      .populate("items.variant")
+      .populate("address")
+      .session(session);
+
     await session.commitTransaction();
     session.endSession();
-    return order[0];
+    return populatedOrder || order[0];
   } catch (error: any) {
     await session.abortTransaction();
     session.endSession();
@@ -126,7 +315,10 @@ const createAdminOrder = async (adminId: string, payload: any) => {
       fullName: customerInfo?.fullName || "Walk-in Customer",
       phone: customerInfo?.phone || "01700000000",
       address: customerInfo?.address || "Store Outlet",
-      city: customerInfo?.city || "Dhaka",
+      city: customerInfo?.city || customerInfo?.district || "Dhaka",
+      district: customerInfo?.district || "Dhaka",
+      upazila: customerInfo?.upazila || "",
+      division: customerInfo?.division || "Dhaka",
     };
 
     const calculatedSubtotal =

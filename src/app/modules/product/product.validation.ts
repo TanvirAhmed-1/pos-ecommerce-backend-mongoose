@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// মঙ্গুজ অবজেক্ট আইডি ভ্যালিডেশন করার জন্য একটি হেল্পার
 const objectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");

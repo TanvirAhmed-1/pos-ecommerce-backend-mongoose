@@ -35,7 +35,10 @@ const invoiceSchema = new Schema<IInvoice>(
       fullName: { type: String, required: true },
       phone: { type: String, required: true },
       address: { type: String, required: true },
-      city: { type: String, required: true },
+      city: { type: String, default: "" },
+      district: { type: String, default: "" },
+      upazila: { type: String, default: "" },
+      division: { type: String, default: "" },
     },
   },
   { timestamps: true }

@@ -23,7 +23,10 @@ export interface IInvoice {
     fullName: string;
     phone: string;
     address: string;
-    city: string;
+    city?: string;
+    district?: string;
+    upazila?: string;
+    division?: string;
   };
 }
 

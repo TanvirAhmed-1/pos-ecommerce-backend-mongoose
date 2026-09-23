@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { UserModel } from "../modules/user/user.model";
 import config from "../config";
+import { seedBangladeshLocations } from "./seedBangladeshLocations";
 
 export const seedSuperAdmin = async () => {
   try {
@@ -28,3 +29,11 @@ export const seedSuperAdmin = async () => {
     console.error("❌ Failed to seed Super Admin:", error);
   }
 };
+
+export const seedDatabase = async () => {
+  await seedSuperAdmin();
+  await seedBangladeshLocations(false);
+};
+
+export { seedBangladeshLocations };
+

@@ -13,7 +13,10 @@ export interface IOrder extends Document {
     fullName: string;
     phone: string;
     address: string;
-    city: string;
+    city?: string;
+    district?: string;
+    upazila?: string;
+    division?: string;
   };
   payment: {
     method: "bkash" | "nagad" | "cod" | "online_payment" | "cash" | "card" | "pos" | "bank_transfer";

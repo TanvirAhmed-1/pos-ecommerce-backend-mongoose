@@ -23,6 +23,16 @@ const getMyAddresses = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateAddress = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.id;
+  const result = await AddressServices.updateAddress(userId, req.params.id as string, req.body);
+  res.status(status.OK).json({
+    success: true,
+    message: "Address updated successfully",
+    data: result,
+  });
+});
+
 const deleteAddress = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
   const result = await AddressServices.deleteAddress(userId, req.params.id as string);
@@ -36,5 +46,6 @@ const deleteAddress = catchAsync(async (req: Request, res: Response) => {
 export const AddressController = {
   createAddress,
   getMyAddresses,
+  updateAddress,
   deleteAddress,
 };

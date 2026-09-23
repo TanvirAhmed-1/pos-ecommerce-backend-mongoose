@@ -22,6 +22,7 @@ import { MailRoutes } from "../modules/mail/mail.route";
 import { ReviewRoutes } from "../modules/review/review.route";
 import { AccountingRoutes } from "../modules/accounting/accounting.route";
 import { BannerRoutes } from "../modules/banner/banner.routes";
+import { ShippingRoutes } from "../modules/shipping/shipping.route";
 
 const routet = Router();
 const allRouters = [
@@ -48,6 +49,7 @@ const allRouters = [
   MailRoutes,
   ReviewRoutes,
   AccountingRoutes,
+  ShippingRoutes,
 ];
 
 
